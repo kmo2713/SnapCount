@@ -106,7 +106,14 @@ function LineupCard({ team, viewedWeek }: { team: MyTeam; viewedWeek: number }) 
 
 function CardHeader({ team }: { team: MyTeam }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: 8,
+      }}
+    >
       <div style={{ minWidth: 0 }}>
         <div className="sc-truncate" style={{ fontWeight: 700, fontSize: 14 }}>
           {team.teamName}

@@ -23,6 +23,12 @@ export function PlatformBadge({ platform }: { platform: Platform }) {
   return (
     <span
       style={{
+        // inline-flex + an explicit height keeps the pill its natural size even
+        // inside a flex parent that defaults to align-items: stretch, which
+        // otherwise stretches it to the height of whatever sits beside it.
+        display: "inline-flex",
+        alignItems: "center",
+        height: 22,
         fontSize: 11,
         fontWeight: 700,
         letterSpacing: 0.4,
@@ -30,9 +36,10 @@ export function PlatformBadge({ platform }: { platform: Platform }) {
         color: meta.color,
         border: `1px solid ${meta.color}55`,
         background: `${meta.color}1A`,
-        padding: "2px 8px",
+        padding: "0 8px",
         borderRadius: 999,
         whiteSpace: "nowrap",
+        flexShrink: 0,
       }}
     >
       {meta.label}
@@ -46,17 +53,21 @@ export function PosTag({ pos }: { pos: string | null | undefined }) {
   return (
     <span
       style={{
+        // Same stretch guard as PlatformBadge — these sit in flex rows too.
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: 20,
         fontSize: 11,
         fontWeight: 800,
         color: c,
         border: `1px solid ${c}66`,
         background: `${c}22`,
-        padding: "1px 6px",
+        padding: "0 6px",
         borderRadius: 4,
         minWidth: 34,
-        textAlign: "center",
-        display: "inline-block",
         whiteSpace: "nowrap",
+        flexShrink: 0,
       }}
     >
       {slotLabel(pos)}
@@ -269,14 +280,18 @@ export function Pill({
   return (
     <span
       style={{
+        display: "inline-flex",
+        alignItems: "center",
+        height: 19,
         fontSize: 10,
         fontWeight: 700,
         color,
         border: `1px solid ${color}55`,
         background: `${color}1A`,
-        padding: "1px 7px",
+        padding: "0 7px",
         borderRadius: 999,
         whiteSpace: "nowrap",
+        flexShrink: 0,
       }}
     >
       {label}
