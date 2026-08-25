@@ -20,6 +20,7 @@ import {
   PosTag,
   fmt,
 } from "@/components/ui/primitives";
+import { AnalysisPanel } from "@/components/ui/AnalysisPanel";
 
 export function LineupsView({ data }: { data: DashboardData }) {
   if (data.teams.length === 0) {
@@ -31,8 +32,9 @@ export function LineupsView({ data }: { data: DashboardData }) {
       <p className="sc-note" style={{ marginBottom: 0 }}>
         Flags compare each starter against your best eligible bench option using
         Sleeper&apos;s own player ranking blended with season scoring, and always
-        surface a starter who is ruled out or on bye. This is a heuristic, not a
-        projection feed — Claude-generated start/sit advice is a later phase.
+        surface a starter who is ruled out or on bye. That is a cheap heuristic
+        and it runs on every load; for a real read on a lineup, ask Claude on the
+        card itself.
       </p>
       {data.teams.map((t) => (
         <LineupCard key={t.id} team={t} viewedWeek={data.viewedWeek} />
@@ -93,6 +95,11 @@ function LineupCard({ team, viewedWeek }: { team: MyTeam; viewedWeek: number }) 
         />
         <LineupColumn title="Bench" rows={bench} muted viewedWeek={viewedWeek} />
       </div>
+
+      <AnalysisPanel
+        request={{ kind: "lineup", teamId: team.id }}
+        label="Ask Claude about this lineup"
+      />
     </div>
   );
 }

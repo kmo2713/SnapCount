@@ -16,6 +16,7 @@ import { sortByPosition } from "@/lib/domain/positions";
 import type { LeagueTeam, RosterPlayer } from "@/lib/domain/types";
 import type { DashboardData } from "@/lib/domain/types";
 import { EmptyState, PosTag, fmt } from "@/components/ui/primitives";
+import { AnalysisPanel } from "@/components/ui/AnalysisPanel";
 
 export function TradesView({ data }: { data: DashboardData }) {
   const [myTeamId, setMyTeamId] = useState<string | null>(null);
@@ -181,6 +182,21 @@ export function TradesView({ data }: { data: DashboardData }) {
           >
             {read.verdict}
           </div>
+
+          <AnalysisPanel
+            label="Ask Claude about this trade"
+            request={
+              myTeam && opponent
+                ? {
+                    kind: "trade",
+                    teamId: myTeam.id,
+                    opponentTeamId: opponent.id,
+                    outgoingPlayerIds: sending,
+                    incomingPlayerIds: receiving,
+                  }
+                : null
+            }
+          />
         </div>
       )}
     </div>

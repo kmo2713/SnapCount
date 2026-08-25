@@ -22,6 +22,7 @@
     "sync:live": "tsx scripts/sync.ts --live"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.34.0",
     "next": "^16.3.2",

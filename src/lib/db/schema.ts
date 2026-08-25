@@ -488,6 +488,43 @@ export const draftPicks = pgTable(
 );
 
 /* -------------------------------------------------------------------------
+   AI analysis
+   ------------------------------------------------------------------------- */
+
+/**
+ * Cached Claude analyses, keyed by a hash of the exact inputs.
+ *
+ * Without this, opening the Lineups view twice would bill twice for an
+ * identical answer. The key covers everything that could change the verdict —
+ * who is starting, their status, their projection — so a real roster change
+ * invalidates it and nothing else does.
+ */
+export const aiAnalyses = pgTable(
+  "ai_analyses",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    /** "lineup" | "trade" */
+    kind: text().notNull(),
+    /** Hash of the inputs; see lineupCacheKey / tradeCacheKey. */
+    cacheKey: text().notNull(),
+    season: text(),
+    week: integer(),
+    leagueId: uuid().references(() => leagues.id, { onDelete: "cascade" }),
+    teamId: uuid().references(() => teams.id, { onDelete: "cascade" }),
+    /** The structured analysis, shaped by the matching Zod schema. */
+    payload: jsonb().notNull(),
+    model: text(),
+    inputTokens: integer(),
+    outputTokens: integer(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("ai_analyses_cache_key_uq").on(t.cacheKey),
+    index("ai_analyses_kind_idx").on(t.kind, t.createdAt),
+  ],
+);
+
+/* -------------------------------------------------------------------------
    Sync bookkeeping
    ------------------------------------------------------------------------- */
 

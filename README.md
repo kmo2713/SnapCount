@@ -165,6 +165,14 @@ needed a number. Everything below now comes from a real signal:
 - **Position grades** — your positional value against the *actual* other rosters
   in that league.
 
+**Claude analysis** (optional, needs `ANTHROPIC_API_KEY`) — the Lineups and
+Trades views each have an *Ask Claude* button. It is opt-in per card rather
+than automatic: seven leagues analysing themselves on every page load would be
+slow and would cost real money for answers nobody asked for. Answers are cached
+in `ai_analyses` on a hash of the exact inputs, so re-opening a view is free
+and only a genuine roster change re-bills. Without a key the button explains
+itself and everything below still works.
+
 Still heuristics, and labelled as such in the UI:
 
 - **Player value** — Sleeper's `search_rank` blended with season scoring and
@@ -172,7 +180,8 @@ Still heuristics, and labelled as such in the UI:
 - **Playoff odds** — record, margin and league size. Withheld entirely before any
   games are played rather than printing an invented number.
 - **Start/sit and trade reads** — value comparisons that respect real lineup
-  eligibility. Claude-generated analysis replaces these in a later phase.
+  eligibility. These run on every load and are free; Claude is the deeper read
+  you ask for explicitly.
 
 ---
 
@@ -289,10 +298,9 @@ almost all of these leagues.
 **Next**
 
 6. **Deploy** — Vercel + Supabase, per the section above.
-7. **Claude-generated analysis** — replace the start/sit and trade heuristics
-   with server-side calls carrying real roster, matchup and scoring context.
-   The heuristics are honest but shallow; this is where the app stops being a
-   viewer and starts giving an opinion.
+**Done, continued**
+
+7. Claude start/sit and trade analysis (Lineups and Trades views)
 
 **Deferred, deliberately**
 
