@@ -41,9 +41,18 @@ export function TradesView({ data }: { data: DashboardData }) {
     [opponent],
   );
 
+  const outgoingPlayers = useMemo(
+    () => myRoster.filter((p) => sending.includes(p.id)),
+    [myRoster, sending],
+  );
+  const incomingPlayers = useMemo(
+    () => theirRoster.filter((p) => receiving.includes(p.id)),
+    [theirRoster, receiving],
+  );
+
   const read = useMemo(() => {
-    const out = myRoster.filter((p) => sending.includes(p.id));
-    const inc = theirRoster.filter((p) => receiving.includes(p.id));
+    const out = outgoingPlayers;
+    const inc = incomingPlayers;
     if (out.length === 0 && inc.length === 0) return null;
     return evaluateTrade(
       out,
@@ -51,7 +60,7 @@ export function TradesView({ data }: { data: DashboardData }) {
       myTeam?.teamName ?? "You",
       opponent?.name ?? "Them",
     );
-  }, [myRoster, theirRoster, sending, receiving, myTeam, opponent]);
+  }, [outgoingPlayers, incomingPlayers, myTeam, opponent]);
 
   if (data.teams.length === 0) {
     return (
@@ -159,29 +168,56 @@ export function TradesView({ data }: { data: DashboardData }) {
       )}
 
       {read && (
-        <div className="sc-card" style={{ padding: 14, marginTop: 18 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>
-            Trade value read
-          </div>
-          <div style={{ display: "flex", gap: 24, fontSize: 13, flexWrap: "wrap" }}>
-            <div>
-              {myTeam?.teamName} sends:{" "}
-              <b className="sc-mono">{fmt(read.outgoing)}</b>
-            </div>
-            <div>
-              {opponent?.name} sends:{" "}
-              <b className="sc-mono">{fmt(read.incoming)}</b>
-            </div>
-          </div>
+        <div className="sc-card" style={{ padding: 16, marginTop: 18 }}>
+          <div className="sc-section-title">Proposed trade</div>
+
+          {/* The trade itself, laid out as it would actually happen. */}
           <div
             style={{
-              marginTop: 10,
-              fontSize: 13,
-              color: read.balanced ? "var(--sc-green)" : "var(--sc-accent)",
+              display: "grid",
+              gridTemplateColumns: "1fr auto 1fr",
+              gap: 14,
+              alignItems: "stretch",
             }}
           >
-            {read.verdict}
+            <TradeLeg
+              heading={`${opponent?.name ?? "They"} receive`}
+              players={outgoingPlayers}
+              total={read.outgoing}
+              align="left"
+              emptyNote="Nothing selected from your roster"
+            />
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--sc-text-muted)",
+                flexShrink: 0,
+              }}
+              aria-hidden="true"
+            >
+              <ArrowLeftRight size={20} />
+            </div>
+
+            <TradeLeg
+              heading={`${myTeam?.teamName ?? "You"} receive`}
+              players={incomingPlayers}
+              total={read.incoming}
+              align="right"
+              highlight
+              emptyNote={`Nothing selected from ${opponent?.name ?? "them"}`}
+            />
           </div>
+
+          {/* Net value, as a bar so the tilt is visible at a glance. */}
+          <ValueBalance
+            outgoing={read.outgoing}
+            incoming={read.incoming}
+            balanced={read.balanced}
+            verdict={read.verdict}
+          />
 
           <AnalysisPanel
             label="Ask Claude about this trade"
@@ -219,10 +255,20 @@ function TradeSide({
   return (
     <div>
       <div
-        className="sc-truncate"
-        style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          gap: 8,
+          marginBottom: 10,
+        }}
       >
-        {title}
+        <span className="sc-truncate" style={{ fontSize: 13, fontWeight: 700 }}>
+          {title}
+        </span>
+        <span className="sc-label">
+          {picked.length > 0 ? `${picked.length} selected` : "value"}
+        </span>
       </div>
       <div
         className="sc-card"
@@ -233,39 +279,223 @@ function TradeSide({
             {emptyNote ?? "No players."}
           </div>
         )}
-        {roster.map((p) => (
-          <label
-            key={p.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "6px 4px",
-              fontSize: 13,
-              cursor: "pointer",
-              borderBottom: "1px solid var(--sc-border-soft)",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={picked.includes(p.id)}
-              onChange={() => onToggle(p.id)}
-            />
-            <PosTag pos={p.position} />
-            <span className="sc-truncate" style={{ flex: 1 }}>
-              {p.name}
-            </span>
-            <span
-              className="sc-mono"
-              style={{ fontSize: 11, color: "var(--sc-text-muted)" }}
+        {roster.map((p) => {
+          const selected = picked.includes(p.id);
+          return (
+            <label
+              key={p.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "6px 6px",
+                fontSize: 13,
+                cursor: "pointer",
+                borderBottom: "1px solid var(--sc-border-soft)",
+                // Selected rows tint so the picker and the summary below agree
+                // at a glance about who is in the deal.
+                background: selected ? "var(--sc-accent-soft)" : "transparent",
+                borderRadius: selected ? 6 : 0,
+              }}
             >
-              {fmt(playerValue(p))}
-            </span>
-          </label>
-        ))}
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={() => onToggle(p.id)}
+              />
+              <PosTag pos={p.position} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span
+                  className="sc-truncate"
+                  style={{ display: "block", fontWeight: selected ? 700 : 400 }}
+                >
+                  {p.name}
+                </span>
+                <span style={{ fontSize: 11, color: "var(--sc-text-muted)" }}>
+                  {p.nflTeam || "—"}
+                  {p.projectedPoints != null && ` · proj ${fmt(p.projectedPoints)}`}
+                  {p.status !== "Active" && (
+                    <span style={{ color: "var(--sc-red)" }}> · {p.status}</span>
+                  )}
+                </span>
+              </span>
+              <span
+                className="sc-mono"
+                title="Snap Count value"
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: selected ? "var(--sc-accent)" : "var(--sc-text-muted)",
+                  flexShrink: 0,
+                }}
+              >
+                {fmt(playerValue(p))}
+              </span>
+            </label>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 export type { LeagueTeam };
+
+/**
+ * One side of the proposed trade: who is moving, what each is worth, and the
+ * side's total. Mirrored so the two legs read outward from the swap icon.
+ */
+function TradeLeg({
+  heading,
+  players,
+  total,
+  align,
+  highlight = false,
+  emptyNote,
+}: {
+  heading: string;
+  players: RosterPlayer[];
+  total: number;
+  align: "left" | "right";
+  /** The side you receive, tinted so the direction is obvious. */
+  highlight?: boolean;
+  emptyNote: string;
+}) {
+  const accent = highlight ? "var(--sc-green)" : "var(--sc-accent)";
+
+  return (
+    <div
+      style={{
+        background: "var(--sc-surface-raised)",
+        border: `1px solid ${players.length > 0 ? `${accent}44` : "var(--sc-border)"}`,
+        borderRadius: 8,
+        padding: 12,
+        minWidth: 0,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div
+        className="sc-label"
+        style={{ color: accent, textAlign: align, marginBottom: 8 }}
+      >
+        {heading}
+      </div>
+
+      {players.length === 0 ? (
+        <div
+          style={{
+            fontSize: 12,
+            color: "var(--sc-text-muted)",
+            textAlign: align,
+            padding: "6px 0",
+          }}
+        >
+          {emptyNote}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+          {players.map((p) => (
+            <div
+              key={p.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexDirection: align === "right" ? "row-reverse" : "row",
+                minWidth: 0,
+              }}
+            >
+              <PosTag pos={p.position} />
+              <div style={{ minWidth: 0, flex: 1, textAlign: align }}>
+                <div className="sc-truncate" style={{ fontSize: 13, fontWeight: 600 }}>
+                  {p.name}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--sc-text-muted)" }}>
+                  {p.nflTeam || "—"}
+                  {p.projectedPoints != null && ` · proj ${fmt(p.projectedPoints)}`}
+                  {p.status !== "Active" && (
+                    <span style={{ color: "var(--sc-red)" }}> · {p.status}</span>
+                  )}
+                </div>
+              </div>
+              <span
+                className="sc-mono"
+                title="Snap Count value — Sleeper rank blended with scoring and injury status"
+                style={{ fontSize: 13, fontWeight: 700, color: accent, flexShrink: 0 }}
+              >
+                {fmt(playerValue(p))}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div
+        style={{
+          marginTop: 10,
+          paddingTop: 8,
+          borderTop: "1px solid var(--sc-border)",
+          display: "flex",
+          justifyContent: align === "right" ? "flex-end" : "flex-start",
+          alignItems: "baseline",
+          gap: 6,
+        }}
+      >
+        <span className="sc-label">total</span>
+        <span className="sc-mono" style={{ fontSize: 16, fontWeight: 700, color: accent }}>
+          {fmt(total)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A single bar showing how the value splits between the two sides, so the tilt
+ * is legible without reading the numbers.
+ */
+function ValueBalance({
+  outgoing,
+  incoming,
+  balanced,
+  verdict,
+}: {
+  outgoing: number;
+  incoming: number;
+  balanced: boolean;
+  verdict: string;
+}) {
+  const sum = outgoing + incoming;
+  // With nothing on either side there is no ratio to draw; split it evenly.
+  const outShare = sum > 0 ? (outgoing / sum) * 100 : 50;
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div
+        style={{
+          display: "flex",
+          height: 6,
+          borderRadius: 3,
+          overflow: "hidden",
+          background: "var(--sc-border-soft)",
+        }}
+        role="img"
+        aria-label={`Value split: ${fmt(outgoing)} out, ${fmt(incoming)} in`}
+      >
+        <div style={{ width: `${outShare}%`, background: "var(--sc-accent)" }} />
+        <div style={{ width: `${100 - outShare}%`, background: "var(--sc-green)" }} />
+      </div>
+
+      <div
+        style={{
+          marginTop: 8,
+          fontSize: 13,
+          color: balanced ? "var(--sc-green)" : "var(--sc-accent)",
+        }}
+      >
+        {verdict}
+      </div>
+    </div>
+  );
+}
