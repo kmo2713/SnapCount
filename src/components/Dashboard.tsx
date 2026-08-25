@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 import type { DashboardData } from "@/lib/domain/types";
-import { PlatformBadge, fmt } from "@/components/ui/primitives";
+import { FormatBadge, PlatformBadge, fmt } from "@/components/ui/primitives";
 import { Avatar } from "@/components/ui/Avatar";
 
 import { OverviewView } from "./views/OverviewView";
@@ -220,7 +220,10 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
                     {t.teamName}
                   </span>
                 </span>
-                <PlatformBadge platform={t.platform} />
+                <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <FormatBadge format={t.leagueFormat} />
+                  <PlatformBadge platform={t.platform} />
+                </span>
               </div>
               <div
                 className="sc-mono"

@@ -24,6 +24,7 @@ import {
   EmptyState,
   PlatformBadge,
   PlayerName,
+  FormatBadge,
   PosTag,
   StatusTag,
   fmt,
@@ -139,7 +140,10 @@ function TeamDetail({ team, viewedWeek }: { team: MyTeam; viewedWeek: number }) 
             </div>
           </div>
         </div>
-        <PlatformBadge platform={team.platform} />
+        <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <FormatBadge format={team.leagueFormat} />
+          <PlatformBadge platform={team.platform} />
+        </span>
       </div>
 
       <div style={{ display: "flex", gap: 12, margin: "14px 0", flexWrap: "wrap" }}>

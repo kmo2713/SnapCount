@@ -16,6 +16,7 @@ import { sortByPosition } from "@/lib/domain/positions";
 import type { DashboardData, MyTeam, RosterPlayer } from "@/lib/domain/types";
 import {
   EmptyState,
+  FormatBadge,
   PlatformBadge,
   PosTag,
   fmt,
@@ -125,7 +126,10 @@ function CardHeader({ team }: { team: MyTeam }) {
           {team.leagueName}
         </div>
       </div>
-      <PlatformBadge platform={team.platform} />
+      <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+        <FormatBadge format={team.leagueFormat} />
+        <PlatformBadge platform={team.platform} />
+      </span>
     </div>
   );
 }

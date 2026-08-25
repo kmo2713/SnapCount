@@ -27,11 +27,15 @@ import type {
 } from "@/lib/domain/types";
 import { env } from "@/lib/env";
 import {
+  leagueFormat as sleeperLeagueFormat,
   recordString,
   teamWaiverState,
   waiverRules as sleeperWaiverRules,
 } from "@/lib/platforms/sleeper/normalize";
-import { waiverRules as espnWaiverRules } from "@/lib/platforms/espn/normalize";
+import {
+  leagueFormat as espnLeagueFormat,
+  waiverRules as espnWaiverRules,
+} from "@/lib/platforms/espn/normalize";
 import type { EspnLeagueSettings } from "@/lib/platforms/espn/league-types";
 import { sleeperAvatarUrl } from "@/lib/platforms/sleeper/client";
 import { resolveViewedWeek } from "@/lib/platforms/sleeper/fetch";
@@ -402,12 +406,19 @@ export async function loadDashboardFromCache(
      * "priority" for every ESPN league — correct today only because both of
      * them really are priority leagues.
      */
-    const waiver =
-      league.platform === "espn"
-        ? espnWaiverRules(league.settings as EspnLeagueSettings | null)
-        : sleeperWaiverRules(
-            (league.settings ?? null) as Record<string, number> | null,
-          );
+    const isEspn = league.platform === "espn";
+    const waiver = isEspn
+      ? espnWaiverRules(league.settings as EspnLeagueSettings | null)
+      : sleeperWaiverRules(
+          (league.settings ?? null) as Record<string, number> | null,
+        );
+    // Same story as waivers: the two platforms describe format differently,
+    // and neither of them describes it in the league's name.
+    const format = isEspn
+      ? espnLeagueFormat(league.settings as EspnLeagueSettings | null)
+      : sleeperLeagueFormat(
+          (league.settings ?? null) as Record<string, number> | null,
+        );
 
     const leagueTeams: LeagueTeam[] = leagueTeamRows.map((r) => {
       const t = r.team;
@@ -506,6 +517,7 @@ export async function loadDashboardFromCache(
       leagueStatus: league.status,
       startingSlots: startingSlots(league.rosterPositions),
       totalRosters: league.totalRosters ?? leagueTeams.length,
+      leagueFormat: format,
       waiverMode: waiver.mode,
       faabBudget: waiver.budget,
 

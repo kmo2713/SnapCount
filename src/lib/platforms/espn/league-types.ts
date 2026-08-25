@@ -33,6 +33,14 @@ export interface EspnLeagueSettings {
     /** lineupSlotId -> how many of that slot the league starts. */
     lineupSlotCounts?: Record<string, number>;
   };
+  draftSettings?: {
+    type?: string;
+    /** Keepers held this season, and next. Both zero means redraft. */
+    keeperCount?: number;
+    keeperCountFuture?: number;
+    /** ESPN's nearest thing to a format label; reports NONE more often than not. */
+    leagueSubType?: string;
+  };
   scoringSettings?: {
     scoringType?: string;
     scoringItems?: unknown;

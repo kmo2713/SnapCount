@@ -19,7 +19,7 @@ import {
 } from "@/lib/domain/analytics";
 import { GRADE_COLOR, GRADE_POSITIONS } from "@/lib/domain/positions";
 import type { DashboardData } from "@/lib/domain/types";
-import { EmptyState, PlatformBadge, Pill } from "@/components/ui/primitives";
+import { EmptyState, FormatBadge, PlatformBadge, Pill } from "@/components/ui/primitives";
 
 export function PowerRankingsView({
   data,
@@ -108,6 +108,7 @@ export function PowerRankingsView({
                   >
                     {team.teamName}
                   </span>
+                  <FormatBadge format={team.leagueFormat} />
                   <PlatformBadge platform={team.platform} />
                   <Pill label={tier.label} color={tier.color} />
                   <span

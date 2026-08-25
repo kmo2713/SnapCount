@@ -19,6 +19,7 @@ import type {
   MyTeam,
   Platform,
   RosterPlayer,
+  LeagueFormat,
   RosterSlotKind,
   WaiverMode,
   WeekMatchup,
@@ -248,6 +249,28 @@ export function recordString(wins: number, losses: number, ties: number): string
   return ties > 0 ? `${wins}-${losses}-${ties}` : `${wins}-${losses}`;
 }
 
+/**
+ * Sleeper's league `type`: 0 redraft, 1 keeper, 2 dynasty.
+ *
+ * Verified against all seven leagues. There is at least one further value in
+ * the wild — the guillotine league reports 3, which Sleeper does not document
+ * — so anything unrecognised returns null rather than being forced into one of
+ * the three. A guillotine league is not meaningfully dynasty or redraft, and
+ * saying nothing is better than picking one.
+ */
+const SLEEPER_LEAGUE_TYPE: Record<number, LeagueFormat> = {
+  0: "redraft",
+  1: "keeper",
+  2: "dynasty",
+};
+
+export function leagueFormat(
+  settings: Record<string, number> | null | undefined,
+): LeagueFormat | null {
+  const type = settings?.type;
+  return typeof type === "number" ? (SLEEPER_LEAGUE_TYPE[type] ?? null) : null;
+}
+
 /** Sleeper's `waiver_type`: 2 is FAAB, 0 and 1 are priority-list variants. */
 const SLEEPER_WAIVER_TYPE_FAAB = 2;
 
@@ -463,6 +486,7 @@ export function buildMyTeam({
     leagueStatus: league.status ?? null,
     startingSlots: startingSlots(league.roster_positions),
     totalRosters: league.total_rosters ?? rosters.length,
+    leagueFormat: leagueFormat(league.settings),
     waiverMode: waiver.mode,
     faabBudget: waiver.budget,
 

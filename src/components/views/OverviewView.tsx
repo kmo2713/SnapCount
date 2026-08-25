@@ -28,6 +28,7 @@ import type { DashboardData, MyTeam } from "@/lib/domain/types";
 import {
   EmptyState,
   MetricCard,
+  FormatBadge,
   PlatformBadge,
   fmt,
 } from "@/components/ui/primitives";
@@ -300,7 +301,10 @@ function TeamCard({
             </div>
           </div>
         </div>
-        <PlatformBadge platform={team.platform} />
+        <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <FormatBadge format={team.leagueFormat} />
+          <PlatformBadge platform={team.platform} />
+        </span>
       </div>
 
       <div

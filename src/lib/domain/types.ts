@@ -67,6 +67,17 @@ export type Consistency = "Boom" | "Steady" | "Volatile";
  */
 export type WaiverMode = "faab" | "priority";
 
+/**
+ * How long a roster survives the offseason.
+ *
+ * Read from each platform's own settings, never from the league's name — a
+ * league called "FFL DYNASTY" happens to be one, but names are what owners
+ * change on a whim and settings are not. Null when the platform reports a
+ * format we do not recognise, which is better than guessing: Sleeper has at
+ * least one type beyond the three documented ones.
+ */
+export type LeagueFormat = "dynasty" | "keeper" | "redraft";
+
 /** Any team in a league, including opponents. */
 export interface LeagueTeam {
   id: string;
@@ -182,6 +193,8 @@ export interface MyTeam {
   /** Ordered starting slots, bench excluded: ["QB","RB","RB","WR",...]. */
   startingSlots: string[];
   totalRosters: number;
+  /** dynasty | keeper | redraft, or null if the platform reports something else. */
+  leagueFormat: LeagueFormat | null;
   /** How this league awards free agents. */
   waiverMode: WaiverMode;
   /** Each team's season FAAB allowance. Null unless waiverMode is "faab". */

@@ -10,7 +10,7 @@ import { AlertTriangle, Loader2, Minus, TrendingDown, TrendingUp } from "lucide-
 
 import { posColor, slotLabel } from "@/lib/domain/positions";
 import { CONSISTENCY_COLOR } from "@/lib/domain/analytics";
-import type { Consistency, Platform } from "@/lib/domain/types";
+import type { Consistency, LeagueFormat, Platform } from "@/lib/domain/types";
 
 const PLATFORM_META: Record<Platform, { label: string; color: string }> = {
   sleeper: { label: "Sleeper", color: "#4C9A5B" },
@@ -36,6 +36,49 @@ export function PlatformBadge({ platform }: { platform: Platform }) {
         color: meta.color,
         border: `1px solid ${meta.color}55`,
         background: `${meta.color}1A`,
+        padding: "0 8px",
+        borderRadius: 999,
+        whiteSpace: "nowrap",
+        flexShrink: 0,
+      }}
+    >
+      {meta.label}
+    </span>
+  );
+}
+
+const FORMAT_META: Record<LeagueFormat, { label: string; color: string }> = {
+  dynasty: { label: "Dynasty", color: "var(--sc-purple)" },
+  keeper: { label: "Keeper", color: "var(--sc-cyan)" },
+  redraft: { label: "Redraft", color: "var(--sc-text-muted)" },
+};
+
+/**
+ * Dynasty / Keeper / Redraft, read from the league's settings.
+ *
+ * Renders nothing when the format is unknown rather than defaulting to one —
+ * Sleeper reports at least one type beyond the documented three (the guillotine
+ * league), and a wrong badge here is worse than no badge, since the whole point
+ * is telling at a glance whether a trade costs you next season.
+ */
+export function FormatBadge({ format }: { format: LeagueFormat | null }) {
+  if (!format) return null;
+  const meta = FORMAT_META[format];
+  return (
+    <span
+      style={{
+        // Same stretch guard as PlatformBadge: these sit in flex rows whose
+        // default align-items would otherwise pull the pill to full height.
+        display: "inline-flex",
+        alignItems: "center",
+        height: 22,
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 0.4,
+        textTransform: "uppercase",
+        color: meta.color,
+        border: `1px solid color-mix(in srgb, ${meta.color} 35%, transparent)`,
+        background: `color-mix(in srgb, ${meta.color} 12%, transparent)`,
         padding: "0 8px",
         borderRadius: 999,
         whiteSpace: "nowrap",

@@ -136,6 +136,12 @@ Three decisions make the schema hold all three platforms:
 1. **No provider id is ever a primary key.** Every upstream row carries
    `platform` plus the provider's own id, so Sleeper roster `4` and an ESPN team
    `4` cannot collide.
+
+   Nothing is keyed on a name, either. Teams upsert on
+   `(league_id, platform_team_id)`, so an owner renaming their team updates the
+   row in place: same uuid, same roster, no duplicate. Verified by renaming one
+   and re-syncing — the row kept its uuid and all 28 roster slots, and the
+   league still had 10 teams rather than 11.
 2. **Players are one canonical dimension.** Sleeper's dump seeds `players`, and
    the other platforms resolve into it through `player_aliases`. A Yahoo- or
    ESPN-only player still gets a canonical row plus an alias — nothing is
@@ -163,6 +169,12 @@ The prototype ran on generated data and used a hash of the player id wherever it
 needed a number. Everything below now comes from a real signal:
 
 - **Rosters, lineups, records, matchups, drafts, standings** — Sleeper, verbatim.
+- **League format** — Dynasty / Keeper / Redraft, from each platform's own
+  settings (Sleeper's league `type`, ESPN's keeper counts) and never from the
+  league's name. Names change; settings do not. Sleeper reports at least one
+  type beyond the documented three — the guillotine league is a `type: 3` —
+  and that shows no badge rather than being forced into a category it does not
+  belong to.
 - **Waiver budgets** — each league's real `waiver_type` and `waiver_budget`
   against every roster's spend, so the Waiver Wire view leads with what you can
   actually afford to bid. A rolling-waiver league has no budget, so it shows its

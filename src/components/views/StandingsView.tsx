@@ -8,7 +8,7 @@ import { ListOrdered } from "lucide-react";
 
 import { sortStandings } from "@/lib/domain/analytics";
 import type { DashboardData } from "@/lib/domain/types";
-import { EmptyState, PlatformBadge, fmt } from "@/components/ui/primitives";
+import { EmptyState, FormatBadge, PlatformBadge, fmt } from "@/components/ui/primitives";
 import { Avatar } from "@/components/ui/Avatar";
 
 export function StandingsView({ data }: { data: DashboardData }) {
@@ -44,6 +44,7 @@ export function StandingsView({ data }: { data: DashboardData }) {
               <h2 style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
                 {team.leagueName}
               </h2>
+              <FormatBadge format={team.leagueFormat} />
               <PlatformBadge platform={team.platform} />
               {!played && (
                 <span style={{ fontSize: 11, color: "var(--sc-text-muted)" }}>

@@ -14,6 +14,7 @@
  *  - Projections and actuals share one `stats` array, told apart by
  *    `statSourceId`. Both already have league scoring applied.
  */
+import type { LeagueFormat } from "@/lib/domain/types";
 import { BENCH_SLOTS, LINEUP_SLOT } from "./players";
 import type {
   EspnLeagueResponse,
@@ -265,4 +266,33 @@ export function waiverRules(settings: EspnLeagueSettings | null | undefined): {
         ? acquisition.acquisitionBudget
         : null,
   };
+}
+
+/**
+ * dynasty | keeper | redraft, from ESPN's draft settings.
+ *
+ * ESPN has no single "format" field, so this reads the keeper counts:
+ * `keeperCount` is how many each team holds this season and
+ * `keeperCountFuture` how many next, and a league that keeps nobody either way
+ * is a redraft. `leagueSubType` is the closest thing to an explicit label and
+ * reports NONE for both configured leagues, so it is only trusted when it
+ * actually says something.
+ *
+ * Note that a *player* carrying `keeperValue` proves nothing — ESPN populates
+ * that on rosters in plain redraft leagues too.
+ */
+export function leagueFormat(
+  settings: EspnLeagueSettings | null | undefined,
+): LeagueFormat | null {
+  const draft = settings?.draftSettings;
+  if (!draft) return null;
+
+  const subType = (draft.leagueSubType ?? "").toUpperCase();
+  if (subType.includes("DYNASTY")) return "dynasty";
+  if (subType.includes("KEEPER")) return "keeper";
+
+  const now = draft.keeperCount ?? 0;
+  const future = draft.keeperCountFuture ?? 0;
+  if (now === 0 && future === 0) return "redraft";
+  return "keeper";
 }
