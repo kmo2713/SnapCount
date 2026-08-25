@@ -9,6 +9,7 @@ import { ListOrdered } from "lucide-react";
 import { sortStandings } from "@/lib/domain/analytics";
 import type { DashboardData } from "@/lib/domain/types";
 import { EmptyState, PlatformBadge, fmt } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/Avatar";
 
 export function StandingsView({ data }: { data: DashboardData }) {
   if (data.teams.length === 0) {
@@ -34,6 +35,12 @@ export function StandingsView({ data }: { data: DashboardData }) {
                 flexWrap: "wrap",
               }}
             >
+              <Avatar
+                src={team.leagueAvatar}
+                name={team.leagueName}
+                size={20}
+                rounded="square"
+              />
               <h2 style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
                 {team.leagueName}
               </h2>
@@ -70,8 +77,13 @@ export function StandingsView({ data }: { data: DashboardData }) {
                           color: r.isMine ? "var(--sc-accent)" : "var(--sc-text)",
                         }}
                       >
-                        {r.name}
-                        {r.isMine && " (you)"}
+                        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <Avatar src={r.avatar} name={r.name} size={22} />
+                          <span className="sc-truncate">
+                            {r.name}
+                            {r.isMine && " (you)"}
+                          </span>
+                        </span>
                       </td>
                       <td style={{ color: "var(--sc-text-muted)", fontSize: 12 }}>
                         {r.ownerName ?? "—"}

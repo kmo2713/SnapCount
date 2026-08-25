@@ -435,6 +435,7 @@ export async function loadDashboardFromCache(
       leagueId: `sleeper-${league.platformLeagueId}`,
       platformLeagueId: league.platformLeagueId,
       leagueName: league.name,
+      leagueAvatar: sleeperAvatarUrl(league.avatar),
       season: league.season,
       leagueStatus: league.status,
       startingSlots: startingSlots(league.rosterPositions),

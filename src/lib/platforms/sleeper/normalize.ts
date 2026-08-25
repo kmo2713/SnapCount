@@ -401,6 +401,7 @@ export function buildMyTeam({
     leagueId: `sleeper-${league.league_id}`,
     platformLeagueId: league.league_id,
     leagueName: league.name.trim(),
+    leagueAvatar: sleeperAvatarUrl(league.avatar),
     season: league.season,
     leagueStatus: league.status ?? null,
     startingSlots: startingSlots(league.roster_positions),

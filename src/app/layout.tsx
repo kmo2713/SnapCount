@@ -3,8 +3,30 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Snap Count",
+  title: {
+    default: "Snap Count",
+    template: "%s · Snap Count",
+  },
   description: "All your fantasy football teams, one screen.",
+  applicationName: "Snap Count",
+  // A personal dashboard has no business in search results.
+  robots: { index: false, follow: false },
+  appleWebApp: {
+    capable: true,
+    title: "Snap Count",
+    statusBarStyle: "black-translucent",
+  },
+  openGraph: {
+    title: "Snap Count",
+    description: "All your fantasy football teams, one screen.",
+    siteName: "Snap Count",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Snap Count",
+    description: "All your fantasy football teams, one screen.",
+  },
 };
 
 export const viewport: Viewport = {

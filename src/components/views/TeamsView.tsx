@@ -28,6 +28,7 @@ import {
   StatusTag,
   fmt,
 } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/Avatar";
 
 export function TeamsView({
   data,
@@ -69,14 +70,19 @@ export function TeamsView({
                 gap: 2,
               }}
             >
-              <span className="sc-truncate" style={{ width: "100%", display: "block" }}>
-                {t.teamName}
-              </span>
-              <span
-                className="sc-truncate"
-                style={{ fontSize: 11, fontWeight: 400, width: "100%", display: "block" }}
-              >
-                {t.leagueName}
+              <span style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", minWidth: 0 }}>
+                <Avatar src={t.avatar} name={t.teamName} size={24} />
+                <span style={{ minWidth: 0, flex: 1 }}>
+                  <span className="sc-truncate" style={{ display: "block" }}>
+                    {t.teamName}
+                  </span>
+                  <span
+                    className="sc-truncate"
+                    style={{ fontSize: 11, fontWeight: 400, display: "block" }}
+                  >
+                    {t.leagueName}
+                  </span>
+                </span>
               </span>
             </button>
           ))}
@@ -108,10 +114,27 @@ function TeamDetail({ team, viewedWeek }: { team: MyTeam; viewedWeek: number }) 
           gap: 12,
         }}
       >
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 18, fontWeight: 700 }}>{team.teamName}</div>
-          <div style={{ fontSize: 12, color: "var(--sc-text-muted)" }}>
-            {team.leagueName} · {team.totalRosters}-team · {team.season}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          <Avatar src={team.avatar} name={team.teamName} size={44} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>{team.teamName}</div>
+            <div
+              style={{
+                fontSize: 12,
+                color: "var(--sc-text-muted)",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Avatar
+                src={team.leagueAvatar}
+                name={team.leagueName}
+                size={16}
+                rounded="square"
+              />
+              {team.leagueName} · {team.totalRosters}-team · {team.season}
+            </div>
           </div>
         </div>
         <PlatformBadge platform={team.platform} />

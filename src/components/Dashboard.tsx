@@ -26,6 +26,7 @@ import {
 
 import type { DashboardData } from "@/lib/domain/types";
 import { PlatformBadge, fmt } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/Avatar";
 
 import { OverviewView } from "./views/OverviewView";
 import { PowerRankingsView } from "./views/PowerRankingsView";
@@ -210,11 +211,14 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
                   gap: 8,
                 }}
               >
-                <span
-                  className="sc-truncate"
-                  style={{ fontSize: 12, fontWeight: 700, maxWidth: 92 }}
-                >
-                  {t.teamName}
+                <span style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+                  <Avatar src={t.avatar} name={t.teamName} size={22} />
+                  <span
+                    className="sc-truncate"
+                    style={{ fontSize: 12, fontWeight: 700, maxWidth: 92 }}
+                  >
+                    {t.teamName}
+                  </span>
                 </span>
                 <PlatformBadge platform={t.platform} />
               </div>

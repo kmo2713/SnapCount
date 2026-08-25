@@ -159,6 +159,8 @@ export interface MyTeam {
   leagueId: string;
   platformLeagueId: string;
   leagueName: string;
+  /** League avatar URL from the platform CDN, when it has one. */
+  leagueAvatar: string | null;
   season: string;
   /** pre_draft | drafting | in_season | complete */
   leagueStatus: string | null;

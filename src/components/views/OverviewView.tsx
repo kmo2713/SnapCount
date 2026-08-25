@@ -31,6 +31,7 @@ import {
   PlatformBadge,
   fmt,
 } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/Avatar";
 
 interface BriefingItem {
   icon: React.ComponentType<{ size?: number; color?: string; style?: object }>;
@@ -273,15 +274,30 @@ function TeamCard({
           gap: 8,
         }}
       >
-        <div style={{ minWidth: 0 }}>
-          <div className="sc-truncate" style={{ fontWeight: 700, fontSize: 14 }}>
-            {team.teamName}
-          </div>
-          <div
-            className="sc-truncate"
-            style={{ fontSize: 11, color: "var(--sc-text-muted)" }}
-          >
-            {team.leagueName}
+        <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+          <Avatar src={team.avatar} name={team.teamName} size={34} />
+          <div style={{ minWidth: 0 }}>
+            <div className="sc-truncate" style={{ fontWeight: 700, fontSize: 14 }}>
+              {team.teamName}
+            </div>
+            <div
+              className="sc-truncate"
+              style={{
+                fontSize: 11,
+                color: "var(--sc-text-muted)",
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <Avatar
+                src={team.leagueAvatar}
+                name={team.leagueName}
+                size={14}
+                rounded="square"
+              />
+              <span className="sc-truncate">{team.leagueName}</span>
+            </div>
           </div>
         </div>
         <PlatformBadge platform={team.platform} />

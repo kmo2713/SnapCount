@@ -32,6 +32,7 @@ import type {
   RosterPlayer,
 } from "@/lib/domain/types";
 import { EmptyState, PlatformBadge, PosTag, fmt } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/Avatar";
 
 export function MatchupView({
   data,
@@ -209,14 +210,26 @@ function SideSummary({
   return (
     <div style={{ textAlign: align, minWidth: 0 }}>
       <div
-        className="sc-truncate"
         style={{
-          fontWeight: 700,
-          fontSize: 14,
-          color: mine ? "var(--sc-accent)" : "var(--sc-text)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          justifyContent: align === "right" ? "flex-end" : "flex-start",
+          minWidth: 0,
         }}
       >
-        {team.name}
+        {align === "left" && <Avatar src={team.avatar} name={team.name} size={26} />}
+        <span
+          className="sc-truncate"
+          style={{
+            fontWeight: 700,
+            fontSize: 14,
+            color: mine ? "var(--sc-accent)" : "var(--sc-text)",
+          }}
+        >
+          {team.name}
+        </span>
+        {align === "right" && <Avatar src={team.avatar} name={team.name} size={26} />}
       </div>
       <div style={{ fontSize: 11, color: "var(--sc-text-muted)" }}>
         {team.record}
@@ -457,14 +470,27 @@ function TeamHeader({
   return (
     <div style={{ textAlign: align, minWidth: 0 }}>
       <div
-        className="sc-truncate"
         style={{
-          fontSize: 16,
-          fontWeight: 700,
-          color: mine ? "var(--sc-accent)" : "var(--sc-text)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          justifyContent: align === "right" ? "flex-end" : "flex-start",
+          minWidth: 0,
+          marginBottom: 2,
         }}
       >
-        {team.name}
+        {align === "left" && <Avatar src={team.avatar} name={team.name} size={40} />}
+        <span
+          className="sc-truncate"
+          style={{
+            fontSize: 16,
+            fontWeight: 700,
+            color: mine ? "var(--sc-accent)" : "var(--sc-text)",
+          }}
+        >
+          {team.name}
+        </span>
+        {align === "right" && <Avatar src={team.avatar} name={team.name} size={40} />}
       </div>
       <div style={{ fontSize: 11, color: "var(--sc-text-muted)", marginBottom: 8 }}>
         {team.record}
