@@ -96,6 +96,7 @@ Typical timings against 7 leagues: **~2.2s** live, **~110ms** cached.
 | `npm run matchup -- Shlong` | Print one head-to-head to the terminal |
 | `npm run sync:live` | Current-week scores only (~1s, the game-day job) |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint (`next lint` was removed in Next 16) |
 | `npm run db:generate` / `db:migrate` | Create / apply migrations |
 | `npm run db:studio` | Browse the cache |
 
@@ -237,11 +238,17 @@ Import the repo, then set environment variables:
 | `DATABASE_URL` | the **6543** Supabase URI |
 | `SLEEPER_USERNAME` | `kmo2713` |
 | `SYNC_SECRET` | `openssl rand -hex 32` |
-| `CRON_SECRET` | the same value as `SYNC_SECRET` |
+| `ANTHROPIC_API_KEY` | for the *Ask Claude* buttons — omit it and they explain themselves instead |
+| `ESPN_S2` / `ESPN_SWID` | ESPN cookies, if you have ESPN leagues |
+| `ESPN_LEAGUE_IDS` | comma-separated, e.g. `1597896928,64251973` |
 
-`CRON_SECRET` is what Vercel Cron sends as a bearer token; the sync route accepts
-it because it compares against `SYNC_SECRET`. If they differ, every scheduled run
-returns 401.
+There is no `CRON_SECRET`: scheduling moved to GitHub Actions, which
+authenticates with `SYNC_SECRET` directly.
+
+**The ESPN cookies expire** — on logout, on a password change, and eventually on
+their own. Nothing announces it; the leagues just stop updating. `/api/health`
+reports whether they are configured, and the sync logs a warning naming the
+league when ESPN refuses. Re-copy them and redeploy when that happens.
 
 Deploy, then check:
 
@@ -313,7 +320,8 @@ almost all of these leagues.
 
 **Next**
 
-6. **Deploy** — Vercel + Supabase, per the section above.
+6. **Deploy** — Vercel + Supabase, per the section above. Remember
+   `npm run db:migrate`: the ESPN work added `0003`.
 **Done, continued**
 
 7. Claude start/sit and trade analysis (Lineups and Trades views)

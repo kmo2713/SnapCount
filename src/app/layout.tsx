@@ -2,7 +2,24 @@ import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
 
+/**
+ * Absolute base for the OG and Twitter image URLs.
+ *
+ * Without it Next resolves them against http://localhost:3000, which builds
+ * fine and then silently serves broken previews everywhere the link is shared.
+ * Vercel injects VERCEL_PROJECT_PRODUCTION_URL on its own; NEXT_PUBLIC_SITE_URL
+ * is the override for anywhere else.
+ */
+function siteUrl(): URL {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (explicit) return new URL(explicit);
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (vercel) return new URL(`https://${vercel}`);
+  return new URL("http://localhost:3000");
+}
+
 export const metadata: Metadata = {
+  metadataBase: siteUrl(),
   title: {
     default: "Snap Count",
     template: "%s · Snap Count",

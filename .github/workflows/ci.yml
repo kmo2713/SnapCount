@@ -1,0 +1,59 @@
+# Build gate.
+#
+# Nothing here talks to Postgres, Sleeper, ESPN or Anthropic. Those need
+# secrets and a network, and a build gate that depends on a third party is a
+# gate that fails for reasons which have nothing to do with the commit. The
+# checks below are the ones that are deterministic offline.
+#
+# `npm run smoke` is deliberately excluded for the same reason — it renders
+# every view against real synced data, which is a thing to run locally before
+# you ship, not a thing CI can do without a database.
+#
+# Note that since Next.js 16, `next build` no longer runs the linter, so lint
+# is its own step rather than something the build covers.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch makes the in-flight run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the engines field in package.json.
+          node-version: "20"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        # A build reads env at module scope, so give it the shape of a real
+        # environment without real values. Nothing is contacted: env.ts is
+        # written to degrade rather than throw when these are absent, and this
+        # step exists to prove that stays true.
+        env:
+          SLEEPER_USERNAME: ci
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build

@@ -10,12 +10,18 @@ import { loadDashboard } from "@/lib/data/dashboard";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  // The load is what might fail; rendering is not. Keeping the JSX outside the
+  // try makes that explicit — React renders components after this function
+  // returns, so a catch wrapped around the JSX never sees a render error and
+  // only reads as though it does.
+  let data;
   try {
-    const data = await loadDashboard();
-    return <Dashboard initialData={data} />;
+    data = await loadDashboard();
   } catch (err) {
     return <StartupError message={err instanceof Error ? err.message : String(err)} />;
   }
+
+  return <Dashboard initialData={data} />;
 }
 
 /** Shown when we could not load anything at all — usually a config problem. */

@@ -3,7 +3,7 @@ import { desc, eq, sql } from "drizzle-orm";
 
 import { getDb, schema } from "@/lib/db/client";
 import { describeDbError } from "@/lib/db/errors";
-import { env, hasDatabase } from "@/lib/env";
+import { env, espnCredentials, hasDatabase } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +25,17 @@ export async function GET() {
     sleeperUsername: env.sleeperUsername,
     season: env.season ?? "(follows Sleeper)",
     syncSecretConfigured: Boolean(env.syncSecret),
+    /*
+     * ESPN cookies expire on logout or a password change, and nothing announces
+     * it — the leagues simply stop updating. Reporting whether they are even
+     * configured turns "my ESPN teams are stale" into a one-URL diagnosis.
+     * Configured is not the same as valid; `npm run espn:verify` and the sync's
+     * own warnings are what prove they still work.
+     */
+    espn: {
+      leaguesConfigured: env.espnLeagueIds.length,
+      cookiesConfigured: espnCredentials() !== null,
+    },
     timestamp: new Date().toISOString(),
   };
 
@@ -52,6 +63,7 @@ export async function GET() {
         rosterSlots: sql<number>`(select count(*) from roster_slots)::int`,
         matchups: sql<number>`(select count(*) from matchups)::int`,
         projections: sql<number>`(select count(*) from player_projections)::int`,
+        espnAliases: sql<number>`(select count(*) from player_aliases where platform = 'espn')::int`,
       })
       .from(sql`(select 1) as _`);
 
