@@ -1,0 +1,29 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/sync?scope=full",
+      "schedule": "0 9,21 * * *"
+    },
+    {
+      "path": "/api/sync?scope=live",
+      "schedule": "*/5 16-23 * * 0"
+    },
+    {
+      "path": "/api/sync?scope=live",
+      "schedule": "*/5 0-5 * * 1"
+    },
+    {
+      "path": "/api/sync?scope=live",
+      "schedule": "*/5 23 * * 4"
+    },
+    {
+      "path": "/api/sync?scope=live",
+      "schedule": "*/5 0-4 * * 5"
+    },
+    {
+      "path": "/api/sync?scope=live",
+      "schedule": "*/5 0-4 * * 2"
+    }
+  ]
+}

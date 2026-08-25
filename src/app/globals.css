@@ -1,0 +1,362 @@
+/*
+ * Snap Count design system — the prototype's "under the lights" dark theme,
+ * lifted out of inline style objects into custom properties so every view
+ * shares one source of truth.
+ *
+ * Oswald for display type, Inter for body, IBM Plex Mono for anything numeric
+ * (records, scores, point totals) so columns of figures line up.
+ */
+
+:root {
+  /* Surfaces */
+  --sc-bg: #10151a;
+  --sc-surface: #161c22;
+  --sc-surface-raised: #1d242b;
+  --sc-border: #2a323b;
+  --sc-border-soft: #20272e;
+
+  /* Type */
+  --sc-text: #f5f3ee;
+  --sc-text-muted: #8b95a1;
+
+  /* Accents */
+  --sc-accent: #f2a63d;
+  --sc-accent-soft: #f2a63d1a;
+  --sc-accent-border: #f2a63d44;
+  --sc-green: #4c9a5b;
+  --sc-red: #d9534f;
+  --sc-orange: #e2725b;
+  --sc-cyan: #6ec6ca;
+  --sc-purple: #9b7bd9;
+
+  /* Layout */
+  --sc-header-height: 118px;
+  --sc-sidebar-width: 178px;
+  --sc-radius: 10px;
+
+  --sc-font-display: "Oswald", "Inter", -apple-system, sans-serif;
+  --sc-font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sc-font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--sc-bg);
+  color: var(--sc-text);
+  font-family: var(--sc-font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden; /* only the content pane scrolls */
+}
+
+/* ---------------------------------------------------------------- shell -- */
+
+.sc-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+}
+
+.sc-header {
+  flex-shrink: 0;
+  padding: 16px 22px 12px;
+  border-bottom: 1px solid var(--sc-border);
+  background: var(--sc-bg);
+}
+
+.sc-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sc-wordmark {
+  font-family: var(--sc-font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.sc-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.sc-sidebar {
+  width: var(--sc-sidebar-width);
+  flex-shrink: 0;
+  padding: 14px;
+  border-right: 1px solid var(--sc-border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+}
+
+.sc-content {
+  flex: 1;
+  min-width: 0;
+  padding: 20px 22px 40px;
+  overflow-y: auto;
+}
+
+/* --------------------------------------------------------------- pieces -- */
+
+.sc-card {
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+}
+
+.sc-card.sc-hover {
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.sc-card.sc-hover:hover {
+  border-color: var(--sc-accent);
+  transform: translateY(-1px);
+}
+
+.sc-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sc-text-muted);
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.sc-nav-btn:hover {
+  background: var(--sc-surface-raised);
+  color: var(--sc-text);
+}
+
+.sc-nav-btn.active {
+  background: var(--sc-accent-soft);
+  color: var(--sc-accent);
+}
+
+.sc-btn {
+  background: var(--sc-surface-raised);
+  border: 1px solid var(--sc-border);
+  color: var(--sc-text);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sc-btn:hover:not(:disabled) {
+  border-color: var(--sc-accent);
+}
+
+.sc-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.sc-input,
+.sc-select {
+  background: var(--sc-surface-raised);
+  border: 1px solid var(--sc-border);
+  color: var(--sc-text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.sc-input:focus-visible,
+.sc-select:focus-visible,
+.sc-btn:focus-visible,
+.sc-nav-btn:focus-visible {
+  outline: 2px solid var(--sc-accent);
+  outline-offset: 1px;
+}
+
+.sc-mono {
+  font-family: var(--sc-font-mono);
+}
+
+.sc-label {
+  font-size: 11px;
+  color: var(--sc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+}
+
+.sc-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+}
+
+.sc-note {
+  font-size: 12px;
+  color: var(--sc-text-muted);
+  line-height: 1.5;
+  margin-bottom: 16px;
+  max-width: 70ch;
+}
+
+/* --------------------------------------------------------------- tables -- */
+
+table.sc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.sc-table th {
+  text-align: left;
+  color: var(--sc-text-muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--sc-border);
+  white-space: nowrap;
+}
+
+table.sc-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--sc-border-soft);
+  vertical-align: middle;
+}
+
+table.sc-table tr:last-child td {
+  border-bottom: none;
+}
+
+table.sc-table tbody tr:hover {
+  background: var(--sc-surface-raised);
+}
+
+.sc-table-scroll {
+  overflow-x: auto;
+}
+
+/* ------------------------------------------------------------ scrollbar -- */
+
+.sc-scroll-x {
+  overflow-x: auto;
+}
+
+.sc-scroll-x::-webkit-scrollbar,
+.sc-content::-webkit-scrollbar,
+.sc-sidebar::-webkit-scrollbar,
+.sc-table-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 6px;
+}
+
+.sc-scroll-x::-webkit-scrollbar-thumb,
+.sc-content::-webkit-scrollbar-thumb,
+.sc-sidebar::-webkit-scrollbar-thumb,
+.sc-table-scroll::-webkit-scrollbar-thumb {
+  background: var(--sc-border);
+  border-radius: 4px;
+}
+
+.sc-scroll-x::-webkit-scrollbar-track,
+.sc-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------- utils -- */
+
+.spin {
+  animation: sc-spin 1s linear infinite;
+}
+
+@keyframes sc-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sc-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sc-grid-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.sc-grid-teams {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  :root {
+    --sc-sidebar-width: 56px;
+  }
+
+  .sc-nav-btn span {
+    display: none;
+  }
+
+  .sc-sidebar {
+    padding: 10px 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+
+  .sc-card.sc-hover:hover {
+    transform: none;
+  }
+}

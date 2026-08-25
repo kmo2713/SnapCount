@@ -1,0 +1,76 @@
+# Scheduled sync via GitHub Actions.
+#
+# Use this instead of vercel.json crons if your Vercel plan limits cron
+# frequency (Hobby is far more restricted than Pro, and the 5-minute game-day
+# schedule is what suffers). GitHub Actions is free for public repos and has a
+# generous allowance for private ones, and the sync endpoint is just an
+# authenticated HTTP call — nothing here is Vercel-specific.
+#
+# Setup:
+#   1. Repository -> Settings -> Secrets and variables -> Actions
+#   2. Add secret  SNAP_COUNT_URL   e.g. https://snap-count.vercel.app
+#   3. Add secret  SYNC_SECRET      same value as the deployment's SYNC_SECRET
+#
+# Note: GitHub's scheduler is best-effort and runs late under load — fine for a
+# fantasy dashboard, not for anything that needs a hard guarantee.
+
+name: Sync
+
+on:
+  schedule:
+    # Full sync twice a day (09:00 and 21:00 UTC).
+    - cron: "0 9,21 * * *"
+    # Game-day live scores, every 10 minutes. Times are UTC; NFL windows are
+    # Eastern, so these cover Sun afternoon/evening, plus Thu and Mon night.
+    - cron: "*/10 16-23 * * 0"
+    - cron: "*/10 0-5 * * 1"
+    - cron: "*/10 0-4 * * 2"
+    - cron: "*/10 23 * * 4"
+    - cron: "*/10 0-4 * * 5"
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "Sync scope"
+        required: true
+        default: "full"
+        type: choice
+        options: [full, live]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger sync
+        env:
+          URL: ${{ secrets.SNAP_COUNT_URL }}
+          SECRET: ${{ secrets.SYNC_SECRET }}
+          # Manual runs use the chosen scope. Scheduled runs use the full sync
+          # only on the twice-daily schedule; everything else is live scores.
+          SCOPE: >-
+            ${{ github.event_name == 'workflow_dispatch'
+                && inputs.scope
+                || (github.event.schedule == '0 9,21 * * *' && 'full' || 'live') }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "::error::SNAP_COUNT_URL and SYNC_SECRET repository secrets must be set."
+            exit 1
+          fi
+
+          echo "Running $SCOPE sync against $URL"
+
+          # --fail-with-body so a non-2xx still prints the API's error message.
+          http_code=$(curl -sS --fail-with-body \
+            --max-time 300 \
+            -o response.json -w '%{http_code}' \
+            -H "Authorization: Bearer $SECRET" \
+            "$URL/api/sync?scope=$SCOPE") || true
+
+          echo "HTTP $http_code"
+          cat response.json || true
+          echo
+
+          case "$http_code" in
+            2*) echo "Sync succeeded." ;;
+            *)  echo "::error::Sync failed with HTTP $http_code"; exit 1 ;;
+          esac
