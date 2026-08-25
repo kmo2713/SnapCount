@@ -11,6 +11,7 @@ import { INJURY_SEVERITY } from "@/lib/domain/positions";
 import type { DashboardData, RosterPlayer } from "@/lib/domain/types";
 import {
   EmptyState,
+  FormatBadge,
   PlatformBadge,
   PlayerName,
   PosTag,
@@ -22,6 +23,7 @@ interface Row extends RosterPlayer {
   teamName: string;
   leagueName: string;
   platform: DashboardData["teams"][number]["platform"];
+  leagueFormat: DashboardData["teams"][number]["leagueFormat"];
 }
 
 export function InjuryWatchView({ data }: { data: DashboardData }) {
@@ -36,6 +38,7 @@ export function InjuryWatchView({ data }: { data: DashboardData }) {
           teamName: t.teamName,
           leagueName: t.leagueName,
           platform: t.platform,
+          leagueFormat: t.leagueFormat,
         });
       }
     }
@@ -115,7 +118,8 @@ export function InjuryWatchView({ data }: { data: DashboardData }) {
                 </td>
                 <td>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <PlatformBadge platform={r.platform} />
+                    <FormatBadge format={r.leagueFormat} compact />
+                    <PlatformBadge platform={r.platform} compact />
                     <span
                       className="sc-truncate"
                       style={{

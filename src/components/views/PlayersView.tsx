@@ -13,6 +13,7 @@ import type { DashboardData, RosterPlayer } from "@/lib/domain/types";
 import {
   ConsistencyTag,
   EmptyState,
+  FormatBadge,
   PlatformBadge,
   PlayerName,
   PosTag,
@@ -25,6 +26,7 @@ interface Row extends RosterPlayer {
   teamName: string;
   leagueName: string;
   platform: DashboardData["teams"][number]["platform"];
+  leagueFormat: DashboardData["teams"][number]["leagueFormat"];
 }
 
 const POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "K", "DEF"];
@@ -45,6 +47,7 @@ export function PlayersView({ data }: { data: DashboardData }) {
           teamName: t.teamName,
           leagueName: t.leagueName,
           platform: t.platform,
+          leagueFormat: t.leagueFormat,
         })),
       ),
     [data.teams],
@@ -215,7 +218,10 @@ export function PlayersView({ data }: { data: DashboardData }) {
                     <div
                       style={{ display: "flex", alignItems: "center", gap: 6 }}
                     >
-                      <PlatformBadge platform={r.platform} />
+                      {/* Compact in these dense tables, so the league name
+                          keeps room to be read. */}
+                      <FormatBadge format={r.leagueFormat} compact />
+                      <PlatformBadge platform={r.platform} compact />
                       <span
                         className="sc-truncate"
                         style={{

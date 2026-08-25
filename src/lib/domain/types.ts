@@ -141,6 +141,8 @@ export interface MatchupDetail {
   leagueId: string;
   leagueName: string;
   platform: Platform;
+  /** Carried through so the head-to-head badges match every other view. */
+  leagueFormat: LeagueFormat | null;
   week: number;
   season: string;
   matchupId: string | null;

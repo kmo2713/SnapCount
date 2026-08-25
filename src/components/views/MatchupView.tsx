@@ -31,7 +31,13 @@ import type {
   MatchupTeamView,
   RosterPlayer,
 } from "@/lib/domain/types";
-import { EmptyState, PlatformBadge, PosTag, fmt } from "@/components/ui/primitives";
+import {
+  EmptyState,
+  FormatBadge,
+  PlatformBadge,
+  PosTag,
+  fmt,
+} from "@/components/ui/primitives";
 import { Avatar } from "@/components/ui/Avatar";
 
 export function MatchupView({
@@ -133,6 +139,7 @@ function MatchupCard({
         }}
       >
         <span className="sc-label">{detail.leagueName}</span>
+        <FormatBadge format={detail.leagueFormat} />
         <PlatformBadge platform={detail.platform} />
       </div>
 
@@ -308,6 +315,7 @@ function MatchupDetailView({
         <span style={{ fontSize: 12, color: "var(--sc-text-muted)" }}>
           {detail.leagueName}
         </span>
+        <FormatBadge format={detail.leagueFormat} />
         <PlatformBadge platform={detail.platform} />
       </div>
 

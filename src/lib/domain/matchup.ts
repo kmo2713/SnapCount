@@ -113,6 +113,7 @@ export function buildMatchupDetail(team: MyTeam): MatchupDetail | null {
     leagueId: team.leagueId,
     leagueName: team.leagueName,
     platform: team.platform,
+    leagueFormat: team.leagueFormat,
     week: team.matchup.week,
     season: team.season,
     matchupId: team.matchup.matchupId,
