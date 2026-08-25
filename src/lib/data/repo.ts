@@ -26,7 +26,11 @@ import type {
   WeeklyPoint,
 } from "@/lib/domain/types";
 import { env } from "@/lib/env";
-import { recordString } from "@/lib/platforms/sleeper/normalize";
+import {
+  recordString,
+  teamWaiverState,
+  waiverRules,
+} from "@/lib/platforms/sleeper/normalize";
 import { sleeperAvatarUrl } from "@/lib/platforms/sleeper/client";
 import { resolveViewedWeek } from "@/lib/platforms/sleeper/fetch";
 
@@ -347,6 +351,9 @@ export async function loadDashboardFromCache(
     if (!mineRow) continue;
 
     const scoring = (league.scoringSettings ?? null) as Record<string, number> | null;
+    const waiver = waiverRules(
+      (league.settings ?? null) as Record<string, number> | null,
+    );
 
     const leagueTeams: LeagueTeam[] = leagueTeamRows.map((r) => {
       const t = r.team;
@@ -367,6 +374,7 @@ export async function loadDashboardFromCache(
         roster: buildRosterFor(t.id, scoring),
         weekScore: toNumOrNull(m?.points),
         weekProjected: null, // set below, once the roster exists
+        ...teamWaiverState(waiver, t.waiverBudgetUsed, t.waiverPosition),
       };
     });
 
@@ -440,6 +448,8 @@ export async function loadDashboardFromCache(
       leagueStatus: league.status,
       startingSlots: startingSlots(league.rosterPositions),
       totalRosters: league.totalRosters ?? leagueTeams.length,
+      waiverMode: waiver.mode,
+      faabBudget: waiver.budget,
 
       teamName: myLeagueTeam.name,
       avatar: myLeagueTeam.avatar,

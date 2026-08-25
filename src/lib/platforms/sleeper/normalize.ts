@@ -20,6 +20,7 @@ import type {
   Platform,
   RosterPlayer,
   RosterSlotKind,
+  WaiverMode,
   WeekMatchup,
   WeeklyPoint,
 } from "@/lib/domain/types";
@@ -247,6 +248,59 @@ export function recordString(wins: number, losses: number, ties: number): string
   return ties > 0 ? `${wins}-${losses}-${ties}` : `${wins}-${losses}`;
 }
 
+/** Sleeper's `waiver_type`: 2 is FAAB, 0 and 1 are priority-list variants. */
+const SLEEPER_WAIVER_TYPE_FAAB = 2;
+
+export interface WaiverRules {
+  mode: WaiverMode;
+  /** Per-team season allowance, FAAB leagues only. */
+  budget: number | null;
+}
+
+/**
+ * Reads a league's waiver rules out of Sleeper's `settings` blob. Note that
+ * `waiver_budget` is populated even in priority leagues, so the budget is only
+ * meaningful once `waiver_type` says the league actually bids.
+ */
+export function waiverRules(
+  settings: Record<string, number> | null | undefined,
+): WaiverRules {
+  const s = settings ?? {};
+  if (s.waiver_type !== SLEEPER_WAIVER_TYPE_FAAB) {
+    return { mode: "priority", budget: null };
+  }
+  return {
+    mode: "faab",
+    budget: typeof s.waiver_budget === "number" ? s.waiver_budget : null,
+  };
+}
+
+/**
+ * The per-team waiver fields, with whichever number the league does not use
+ * left null rather than filled with a plausible-looking zero.
+ */
+export function teamWaiverState(
+  rules: WaiverRules,
+  budgetUsed: number | null | undefined,
+  waiverPosition: number | null | undefined,
+): Pick<LeagueTeam, "faabUsed" | "faabRemaining" | "waiverPosition"> {
+  if (rules.mode !== "faab") {
+    return {
+      faabUsed: null,
+      faabRemaining: null,
+      waiverPosition: waiverPosition ?? null,
+    };
+  }
+  // A team that has never bid reports no `waiver_budget_used` at all, which is
+  // the same thing as having spent nothing.
+  const used = budgetUsed ?? 0;
+  return {
+    faabUsed: used,
+    faabRemaining: rules.budget != null ? Math.max(0, rules.budget - used) : null,
+    waiverPosition: null,
+  };
+}
+
 interface BuildLeagueArgs {
   league: SleeperLeague;
   users: SleeperLeagueUser[];
@@ -291,6 +345,8 @@ export function buildMyTeam({
   const teamIdFor = (rosterId: number) =>
     `sleeper-${league.league_id}-${rosterId}`;
 
+  const waiver = waiverRules(league.settings);
+
   /** Builds any roster in this league into a LeagueTeam. */
   const toLeagueTeam = (roster: SleeperRoster): LeagueTeam => {
     const user = roster.owner_id ? userById.get(roster.owner_id) : undefined;
@@ -320,6 +376,7 @@ export function buildMyTeam({
       }),
       weekScore: m?.points ?? null,
       weekProjected: null, // filled in just below, once the roster exists
+      ...teamWaiverState(waiver, s.waiver_budget_used, s.waiver_position),
     };
   };
 
@@ -406,6 +463,8 @@ export function buildMyTeam({
     leagueStatus: league.status ?? null,
     startingSlots: startingSlots(league.roster_positions),
     totalRosters: league.total_rosters ?? rosters.length,
+    waiverMode: waiver.mode,
+    faabBudget: waiver.budget,
 
     teamName: myLeagueTeam.name,
     avatar: myLeagueTeam.avatar,

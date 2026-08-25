@@ -303,3 +303,13 @@ export function fmt(n: number | null | undefined, digits = 1): string {
   if (n == null || !Number.isFinite(n)) return "—";
   return n.toFixed(digits);
 }
+
+/**
+ * FAAB amounts. Sleeper stores them as plain integers, but every league in
+ * practice talks about them as dollars, and budgets run to four figures — so
+ * they get a currency mark and a thousands separator.
+ */
+export function fmtFaab(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return `$${Math.round(n).toLocaleString()}`;
+}

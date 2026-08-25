@@ -58,6 +58,15 @@ export interface RosterPlayer {
 
 export type Consistency = "Boom" | "Steady" | "Volatile";
 
+/**
+ * How a league awards free agents. The distinction is load-bearing: a budget
+ * is meaningless in a priority league and a priority number is meaningless in
+ * a FAAB one, so a view that shows both unconditionally is lying about one of
+ * them. Sleeper encodes this as `waiver_type` — 2 is FAAB, 0 and 1 are rolling
+ * and reverse-standings priority lists.
+ */
+export type WaiverMode = "faab" | "priority";
+
 /** Any team in a league, including opponents. */
 export interface LeagueTeam {
   id: string;
@@ -77,6 +86,12 @@ export interface LeagueTeam {
   weekScore: number | null;
   /** Projected total for the viewed week's starting lineup. */
   weekProjected: number | null;
+  /** FAAB spent this season. Null in priority leagues, which have no budget. */
+  faabUsed: number | null;
+  /** Budget left to bid with. Null in priority leagues, or if none is set. */
+  faabRemaining: number | null;
+  /** Rolling waiver priority, 1 = next claim. Null in FAAB leagues. */
+  waiverPosition: number | null;
 }
 
 export interface MatchupSide {
@@ -167,6 +182,10 @@ export interface MyTeam {
   /** Ordered starting slots, bench excluded: ["QB","RB","RB","WR",...]. */
   startingSlots: string[];
   totalRosters: number;
+  /** How this league awards free agents. */
+  waiverMode: WaiverMode;
+  /** Each team's season FAAB allowance. Null unless waiverMode is "faab". */
+  faabBudget: number | null;
 
   teamName: string;
   avatar: string | null;

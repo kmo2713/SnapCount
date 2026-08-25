@@ -27,6 +27,7 @@ import {
   PosTag,
   StatusTag,
   fmt,
+  fmtFaab,
 } from "@/components/ui/primitives";
 import { Avatar } from "@/components/ui/Avatar";
 
@@ -98,6 +99,7 @@ export function TeamsView({
 
 function TeamDetail({ team, viewedWeek }: { team: MyTeam; viewedWeek: number }) {
   const grades = useMemo(() => computeTeamGrades(team), [team]);
+  const waiver = useMemo(() => waiverStat(team), [team]);
 
   const starters = sortByPosition(team.starters);
   const bench = sortByPosition(team.bench.filter((p) => p.kind === "bench"));
@@ -144,6 +146,7 @@ function TeamDetail({ team, viewedWeek }: { team: MyTeam; viewedWeek: number }) 
         <StatCard label="Record" value={team.record} />
         <StatCard label="Points for" value={fmt(team.pointsFor)} />
         <StatCard label="Points against" value={fmt(team.pointsAgainst)} />
+        <StatCard label={waiver.label} value={waiver.value} />
         {team.matchup ? (
           <StatCard
             label={`Week ${viewedWeek} vs ${team.matchup.opponent?.teamName ?? "—"}`}
@@ -169,6 +172,30 @@ function TeamDetail({ team, viewedWeek }: { team: MyTeam; viewedWeek: number }) 
       {taxi.length > 0 && <RosterSection title="Taxi squad" rows={taxi} />}
     </div>
   );
+}
+
+/**
+ * Waivers as one stat card. Which number is meaningful depends on the league:
+ * a FAAB league has a budget and no priority, a rolling-waiver league has a
+ * priority and no budget, and showing the wrong one is worse than showing
+ * neither. The budget rides in the label so the value stays a single figure
+ * that cannot overflow the card.
+ */
+function waiverStat(team: MyTeam): { label: string; value: string } {
+  const mine = team.leagueTeams.find((t) => t.isMine);
+
+  if (team.waiverMode === "priority") {
+    return {
+      label: "Waiver priority",
+      value: mine?.waiverPosition != null ? `#${mine.waiverPosition}` : "—",
+    };
+  }
+
+  return {
+    label:
+      team.faabBudget != null ? `FAAB left of ${fmtFaab(team.faabBudget)}` : "FAAB left",
+    value: fmtFaab(mine?.faabRemaining),
+  };
 }
 
 function StatCard({ label, value }: { label: string; value: string }) {

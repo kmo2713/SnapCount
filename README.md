@@ -150,6 +150,10 @@ The prototype ran on generated data and used a hash of the player id wherever it
 needed a number. Everything below now comes from a real signal:
 
 - **Rosters, lineups, records, matchups, drafts, standings** — Sleeper, verbatim.
+- **Waiver budgets** — each league's real `waiver_type` and `waiver_budget`
+  against every roster's spend, so the Waiver Wire view leads with what you can
+  actually afford to bid. A rolling-waiver league has no budget, so it shows its
+  priority number instead of a fabricated `$0`.
 - **Weekly projections** — Rotowire, via Sleeper. Crucially, the raw projected
   stat line is multiplied through *each league’s own* `scoring_settings`
   rather than trusting the generic `pts_ppr` figure. Josh Allen’s week-1
@@ -313,7 +317,6 @@ almost all of these leagues.
 
 **Smaller gaps worth knowing about**
 
-- FAAB / waiver budget is synced (`waiverBudgetUsed`) but no view shows it.
 - Two leagues are pre-draft, so Draft Recap is empty for them until they draft.
 - Projections only exist for the current and upcoming week — Sleeper does not
   publish them further out.
