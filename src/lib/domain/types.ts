@@ -73,10 +73,13 @@ export type WaiverMode = "faab" | "priority";
  * Read from each platform's own settings, never from the league's name — a
  * league called "FFL DYNASTY" happens to be one, but names are what owners
  * change on a whim and settings are not. Null when the platform reports a
- * format we do not recognise, which is better than guessing: Sleeper has at
- * least one type beyond the three documented ones.
+ * format we do not recognise, rather than guessing at a category.
+ *
+ * Guillotine is its own thing rather than a flavour of redraft: a team is
+ * eliminated every week and its roster returns to the pool, so neither
+ * "dynasty" nor "redraft" describes what you are looking at.
  */
-export type LeagueFormat = "dynasty" | "keeper" | "redraft";
+export type LeagueFormat = "dynasty" | "keeper" | "redraft" | "guillotine";
 
 /** Any team in a league, including opponents. */
 export interface LeagueTeam {

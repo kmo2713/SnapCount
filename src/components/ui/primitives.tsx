@@ -18,28 +18,44 @@ const PLATFORM_META: Record<Platform, { label: string; color: string }> = {
   espn: { label: "ESPN", color: "#D9534F" },
 };
 
-export function PlatformBadge({ platform }: { platform: Platform }) {
+/**
+ * Shared pill geometry. `compact` exists for the 210px Teams sidebar, where a
+ * full-size pair of badges wraps to a second line.
+ */
+function badgeStyle(compact: boolean) {
+  return {
+    // inline-flex + an explicit height keeps the pill its natural size even
+    // inside a flex parent that defaults to align-items: stretch, which
+    // otherwise stretches it to the height of whatever sits beside it.
+    display: "inline-flex" as const,
+    alignItems: "center" as const,
+    height: compact ? 17 : 22,
+    fontSize: compact ? 9 : 11,
+    fontWeight: 700,
+    letterSpacing: compact ? 0.3 : 0.4,
+    textTransform: "uppercase" as const,
+    padding: compact ? "0 5px" : "0 8px",
+    borderRadius: 999,
+    whiteSpace: "nowrap" as const,
+    flexShrink: 0,
+  };
+}
+
+export function PlatformBadge({
+  platform,
+  compact = false,
+}: {
+  platform: Platform;
+  compact?: boolean;
+}) {
   const meta = PLATFORM_META[platform];
   return (
     <span
       style={{
-        // inline-flex + an explicit height keeps the pill its natural size even
-        // inside a flex parent that defaults to align-items: stretch, which
-        // otherwise stretches it to the height of whatever sits beside it.
-        display: "inline-flex",
-        alignItems: "center",
-        height: 22,
-        fontSize: 11,
-        fontWeight: 700,
-        letterSpacing: 0.4,
-        textTransform: "uppercase",
+        ...badgeStyle(compact),
         color: meta.color,
         border: `1px solid ${meta.color}55`,
         background: `${meta.color}1A`,
-        padding: "0 8px",
-        borderRadius: 999,
-        whiteSpace: "nowrap",
-        flexShrink: 0,
       }}
     >
       {meta.label}
@@ -51,6 +67,7 @@ const FORMAT_META: Record<LeagueFormat, { label: string; color: string }> = {
   dynasty: { label: "Dynasty", color: "var(--sc-purple)" },
   keeper: { label: "Keeper", color: "var(--sc-cyan)" },
   redraft: { label: "Redraft", color: "var(--sc-text-muted)" },
+  guillotine: { label: "Guillotine", color: "var(--sc-orange)" },
 };
 
 /**
@@ -61,28 +78,22 @@ const FORMAT_META: Record<LeagueFormat, { label: string; color: string }> = {
  * league), and a wrong badge here is worse than no badge, since the whole point
  * is telling at a glance whether a trade costs you next season.
  */
-export function FormatBadge({ format }: { format: LeagueFormat | null }) {
+export function FormatBadge({
+  format,
+  compact = false,
+}: {
+  format: LeagueFormat | null;
+  compact?: boolean;
+}) {
   if (!format) return null;
   const meta = FORMAT_META[format];
   return (
     <span
       style={{
-        // Same stretch guard as PlatformBadge: these sit in flex rows whose
-        // default align-items would otherwise pull the pill to full height.
-        display: "inline-flex",
-        alignItems: "center",
-        height: 22,
-        fontSize: 11,
-        fontWeight: 700,
-        letterSpacing: 0.4,
-        textTransform: "uppercase",
+        ...badgeStyle(compact),
         color: meta.color,
         border: `1px solid color-mix(in srgb, ${meta.color} 35%, transparent)`,
         background: `color-mix(in srgb, ${meta.color} 12%, transparent)`,
-        padding: "0 8px",
-        borderRadius: 999,
-        whiteSpace: "nowrap",
-        flexShrink: 0,
       }}
     >
       {meta.label}

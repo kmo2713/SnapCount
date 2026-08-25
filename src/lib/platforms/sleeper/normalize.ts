@@ -250,18 +250,17 @@ export function recordString(wins: number, losses: number, ties: number): string
 }
 
 /**
- * Sleeper's league `type`: 0 redraft, 1 keeper, 2 dynasty.
+ * Sleeper's league `type`: 0 redraft, 1 keeper, 2 dynasty, 3 guillotine.
  *
- * Verified against all seven leagues. There is at least one further value in
- * the wild — the guillotine league reports 3, which Sleeper does not document
- * — so anything unrecognised returns null rather than being forced into one of
- * the three. A guillotine league is not meaningfully dynasty or redraft, and
- * saying nothing is better than picking one.
+ * The first three are documented; 3 is not, and was identified from the one
+ * league here that reports it being an actual guillotine league. Anything
+ * beyond these still returns null rather than being forced into a category.
  */
 const SLEEPER_LEAGUE_TYPE: Record<number, LeagueFormat> = {
   0: "redraft",
   1: "keeper",
   2: "dynasty",
+  3: "guillotine",
 };
 
 export function leagueFormat(

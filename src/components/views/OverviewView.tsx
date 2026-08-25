@@ -266,29 +266,28 @@ function TeamCard({
       }}
       style={{ padding: 14 }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: 10,
-          gap: 8,
-        }}
-      >
+      {/*
+       * Name, league and badges each get their own row. They used to share one:
+       * these cards are minmax(240px, 1fr), so a 34px avatar plus two badges
+       * left roughly 40px for the team name, which truncated almost everything
+       * to nothing. Stacking costs one line of height and makes all three
+       * legible at any card width.
+       */}
+      <div style={{ marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
           <Avatar src={team.avatar} name={team.teamName} size={34} />
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div className="sc-truncate" style={{ fontWeight: 700, fontSize: 14 }}>
               {team.teamName}
             </div>
             <div
-              className="sc-truncate"
               style={{
                 fontSize: 11,
                 color: "var(--sc-text-muted)",
                 display: "flex",
                 alignItems: "center",
                 gap: 5,
+                minWidth: 0,
               }}
             >
               <Avatar
@@ -301,10 +300,19 @@ function TeamCard({
             </div>
           </div>
         </div>
-        <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            flexWrap: "wrap",
+            marginTop: 9,
+          }}
+        >
           <FormatBadge format={team.leagueFormat} />
           <PlatformBadge platform={team.platform} />
-        </span>
+        </div>
       </div>
 
       <div

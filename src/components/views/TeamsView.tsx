@@ -86,6 +86,24 @@ export function TeamsView({
                   </span>
                 </span>
               </span>
+              {/*
+               * Compact badges: at 210px the full-size pair wraps to a second
+               * line, and the sidebar is meant to be scannable rather than
+               * read.
+               */}
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  flexWrap: "wrap",
+                  marginTop: 3,
+                  paddingLeft: 32,
+                }}
+              >
+                <FormatBadge format={t.leagueFormat} compact />
+                <PlatformBadge platform={t.platform} compact />
+              </span>
             </button>
           ))}
         </div>

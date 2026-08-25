@@ -169,12 +169,11 @@ The prototype ran on generated data and used a hash of the player id wherever it
 needed a number. Everything below now comes from a real signal:
 
 - **Rosters, lineups, records, matchups, drafts, standings** — Sleeper, verbatim.
-- **League format** — Dynasty / Keeper / Redraft, from each platform's own
-  settings (Sleeper's league `type`, ESPN's keeper counts) and never from the
-  league's name. Names change; settings do not. Sleeper reports at least one
-  type beyond the documented three — the guillotine league is a `type: 3` —
-  and that shows no badge rather than being forced into a category it does not
-  belong to.
+- **League format** — Dynasty / Keeper / Redraft / Guillotine, from each
+  platform's own settings (Sleeper's league `type`, ESPN's keeper counts) and
+  never from the league's name. Names change; settings do not. Sleeper
+  documents types 0-2; `type: 3` is undocumented and is guillotine. Any value
+  beyond those still renders no badge rather than being forced into a category.
 - **Waiver budgets** — each league's real `waiver_type` and `waiver_budget`
   against every roster's spend, so the Waiver Wire view leads with what you can
   actually afford to bid. A rolling-waiver league has no budget, so it shows its
