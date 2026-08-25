@@ -10,7 +10,14 @@ import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 
 import { requireDb, schema } from "@/lib/db/client";
 import { env } from "@/lib/env";
+import { espn } from "@/lib/platforms/espn/client";
+import {
+  buildEspnCrosswalk,
+  espnOnlyPlayerId,
+  type CanonicalPlayer,
+} from "@/lib/platforms/espn/players";
 import { fetchByeWeeks } from "@/lib/platforms/nfl/schedule";
+import { syncEspnLeaguesInner, type SyncEspnOptions } from "./sync-espn";
 import { sleeper } from "@/lib/platforms/sleeper/client";
 import {
   fetchLeagueBundle,
@@ -204,6 +211,156 @@ export async function syncPlayers(force = false): Promise<SyncResult> {
 
     return { stats: { players: rows.length }, warnings: [] };
   });
+}
+
+/**
+ * Resolves ESPN's player universe onto our canonical players and stores the
+ * result in `player_aliases`.
+ *
+ * This has to exist before any ESPN league can be read, because an ESPN roster
+ * is a list of ESPN player ids and nothing else. The obvious shortcut —
+ * trusting the `espn_id` Sleeper hands us — covers barely a third of the
+ * players who matter and none of the team defenses, so the crosswalk earns its
+ * keep by matching on name and NFL team as well.
+ *
+ * Rows are updated rather than left alone on conflict: improving the matcher
+ * should correct existing mappings on the next run, not leave the old ones in
+ * place forever.
+ */
+export async function syncEspnAliases(season: string): Promise<SyncResult> {
+  return recorded("espn-ids", "espn", async () => {
+    const db = requireDb();
+
+    const [universe, proTeams] = await Promise.all([
+      espn.getPlayerUniverse(season),
+      espn.getProTeams(season),
+    ]);
+
+    const canonical = (await db
+      .select({
+        id: players.id,
+        fullName: players.fullName,
+        position: players.position,
+        nflTeam: players.nflTeam,
+        espnId: players.espnId,
+      })
+      .from(players)) as CanonicalPlayer[];
+
+    if (canonical.length === 0) {
+      return {
+        stats: {
+          espnPlayers: universe.length,
+          matched: 0,
+          espnOnly: 0,
+          unmatched: universe.length,
+          notable: 0,
+        },
+        warnings: ["No canonical players yet — run the player sync first."],
+      };
+    }
+
+    const result = buildEspnCrosswalk({
+      espnPlayers: universe,
+      canonical,
+      proTeams,
+    });
+
+    /*
+     * Head coaches and team QBs have no Sleeper counterpart, so they get
+     * canonical rows of their own before being aliased — otherwise a league
+     * that starts a head coach every week renders that slot permanently empty.
+     * Ids are namespaced `espn-<id>` so they cannot collide with Sleeper's.
+     */
+    for (const batch of chunk(
+      result.espnOnly.map((p) => ({
+        id: espnOnlyPlayerId(p.espnPlayerId),
+        espnId: p.espnPlayerId,
+        fullName: p.name,
+        searchName: p.name.toLowerCase().replace(/[^a-z0-9]/g, ""),
+        position: p.position,
+        fantasyPositions: [p.position],
+        nflTeam: p.nflTeam || null,
+        active: true,
+      })),
+    )) {
+      await db
+        .insert(players)
+        .values(batch)
+        .onConflictDoUpdate({
+          target: players.id,
+          set: {
+            fullName: sql`excluded.full_name`,
+            nflTeam: sql`excluded.nfl_team`,
+            updatedAt: sql`now()`,
+          },
+        });
+    }
+
+    const aliasRows = [
+      ...result.matches.map((m) => ({
+        platformPlayerId: m.espnPlayerId,
+        playerId: m.playerId,
+      })),
+      ...result.espnOnly.map((p) => ({
+        platformPlayerId: p.espnPlayerId,
+        playerId: espnOnlyPlayerId(p.espnPlayerId),
+      })),
+    ];
+
+    for (const batch of chunk(
+      aliasRows.map((m) => ({
+        platform: "espn" as const,
+        platformPlayerId: m.platformPlayerId,
+        playerId: m.playerId,
+      })),
+    )) {
+      await db
+        .insert(playerAliases)
+        .values(batch)
+        .onConflictDoUpdate({
+          target: [playerAliases.platform, playerAliases.platformPlayerId],
+          set: { playerId: sql`excluded.player_id`, updatedAt: sql`now()` },
+        });
+    }
+
+    // Only misses anyone actually rosters are worth a warning. The universe
+    // carries thousands of retired players Sleeper has long since dropped.
+    const notable = result.unmatched
+      .filter((u) => u.fantasyRelevant && u.percentOwned >= 1)
+      .sort((a, b) => b.percentOwned - a.percentOwned);
+
+    const warnings = notable.slice(0, 10).map(
+      (u) =>
+        `No canonical player for ESPN ${u.position} ${u.name} (${u.nflTeam || "FA"}), ` +
+        `rostered in ${u.percentOwned.toFixed(1)}% of leagues — ${u.reason}.`,
+    );
+    if (notable.length > warnings.length) {
+      warnings.push(`…and ${notable.length - warnings.length} more unmatched.`);
+    }
+
+    return {
+      stats: {
+        espnPlayers: universe.length,
+        matched: result.matches.length,
+        espnOnly: result.espnOnly.length,
+        unmatched: result.unmatched.length,
+        notable: notable.length,
+      },
+      warnings,
+    };
+  });
+}
+
+/**
+ * ESPN leagues, written into the same tables as the Sleeper ones.
+ *
+ * The work lives in ./sync-espn; this wrapper exists so the job is recorded in
+ * `sync_runs` alongside every other scope.
+ */
+export async function syncEspnLeagues(
+  options: SyncEspnOptions = {},
+): Promise<SyncResult> {
+  return recorded("espn", "espn", () => syncEspnLeaguesInner(options));
 }
 
 /* -------------------------------------------------------------------------
@@ -1111,6 +1268,11 @@ export interface SyncAllOptions extends SyncLeaguesOptions {
    * first time a season is synced.
    */
   includeSchedule?: boolean;
+  /**
+   * Force a rebuild of the ESPN player crosswalk. Left false, it is built the
+   * first time and then only on request — ESPN's universe moves slowly.
+   */
+  includeEspnIds?: boolean;
 }
 
 /** Runs the jobs in dependency order: players -> state/schedule -> leagues. */
@@ -1142,7 +1304,53 @@ export async function syncAll(options: SyncAllOptions = {}): Promise<SyncResult[
     results.push(await syncSchedule(season));
   }
 
+  /*
+   * The ESPN crosswalk depends on the canonical players above and on nothing
+   * else, so it runs before any league sync. It is also the one job here that
+   * talks to a platform we cannot read leagues from yet — building the id map
+   * early means the mapping is already correct and already exercised on the
+   * day ESPN leagues do land.
+   */
+  const [{ count: espnAliasCount }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(playerAliases)
+    .where(eq(playerAliases.platform, "espn"));
+
+  if (options.includeEspnIds || espnAliasCount === 0) {
+    try {
+      results.push(await syncEspnAliases(season));
+    } catch (err) {
+      // ESPN is undocumented and unsupported; it must never be able to fail a
+      // sync whose Sleeper half is perfectly healthy.
+      results.push({
+        scope: "espn-ids",
+        stats: {},
+        warnings: [
+          `ESPN id crosswalk skipped: ${err instanceof Error ? err.message : String(err)}`,
+        ],
+        durationMs: 0,
+      });
+    }
+  }
+
   results.push(await syncSleeperLeagues({ ...options, season }));
+
+  // ESPN is optional and unsupported upstream; it must never fail a sync whose
+  // Sleeper half is healthy.
+  if (env.espnLeagueIds.length > 0) {
+    try {
+      results.push(await syncEspnLeagues({ season, weeks: options.weeks }));
+    } catch (err) {
+      results.push({
+        scope: "espn",
+        stats: {},
+        warnings: [
+          `ESPN league sync failed: ${err instanceof Error ? err.message : String(err)}`,
+        ],
+        durationMs: 0,
+      });
+    }
+  }
 
   // Projections only exist for the current and upcoming weeks, so there is no
   // point re-pulling the whole season.

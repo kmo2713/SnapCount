@@ -29,8 +29,10 @@ import { env } from "@/lib/env";
 import {
   recordString,
   teamWaiverState,
-  waiverRules,
+  waiverRules as sleeperWaiverRules,
 } from "@/lib/platforms/sleeper/normalize";
+import { waiverRules as espnWaiverRules } from "@/lib/platforms/espn/normalize";
+import type { EspnLeagueSettings } from "@/lib/platforms/espn/league-types";
 import { sleeperAvatarUrl } from "@/lib/platforms/sleeper/client";
 import { resolveViewedWeek } from "@/lib/platforms/sleeper/fetch";
 
@@ -50,6 +52,31 @@ const {
   teams,
   trendingPlayers,
 } = schema;
+
+/**
+ * Ids the UI uses to address a team or league.
+ *
+ * They carry the platform because two platforms can and do use the same
+ * numeric ids — Sleeper roster 4 and ESPN team 4 are different franchises, and
+ * an id that did not say which would silently merge them.
+ */
+const leagueKey = (platform: string, platformLeagueId: string): string =>
+  `${platform}-${platformLeagueId}`;
+
+const teamKey = (
+  platform: string,
+  platformLeagueId: string,
+  platformTeamId: string,
+): string => `${platform}-${platformLeagueId}-${platformTeamId}`;
+
+/**
+ * Avatars, per platform. Sleeper stores a CDN key that has to be expanded;
+ * ESPN stores a complete URL, so it is passed through untouched.
+ */
+function avatarUrl(platform: string, value: string | null | undefined): string | null {
+  if (!value) return null;
+  return platform === "sleeper" ? sleeperAvatarUrl(value) : value;
+}
 
 const toNum = (v: string | number | null | undefined): number =>
   v == null ? 0 : typeof v === "number" ? v : Number(v);
@@ -278,6 +305,13 @@ export async function loadDashboardFromCache(
 
   /** teamId -> { playerId -> points } for the viewed week. */
   const pointsByTeam = new Map<string, Map<string, number>>();
+  /**
+   * The same, for projections a platform reports per player and per league.
+   * Only ESPN fills this: its projection already has league scoring applied,
+   * so there is nothing to compute at read time. Sleeper's path goes through
+   * `projectionSources` below instead.
+   */
+  const storedProjectionsByTeam = new Map<string, Map<string, number>>();
   const matchupById = new Map(matchupRows.map((m) => [m.id, m]));
   for (const mp of matchupPlayerRows) {
     const m = matchupById.get(mp.matchupId);
@@ -285,6 +319,13 @@ export async function loadDashboardFromCache(
     const map = pointsByTeam.get(m.teamId) ?? new Map<string, number>();
     if (mp.points != null) map.set(mp.playerId, mp.points);
     pointsByTeam.set(m.teamId, map);
+
+    if (mp.projectedPoints != null) {
+      const proj =
+        storedProjectionsByTeam.get(m.teamId) ?? new Map<string, number>();
+      proj.set(mp.playerId, mp.projectedPoints);
+      storedProjectionsByTeam.set(m.teamId, proj);
+    }
   }
 
   /** Rosters are built per league so projections use that league’s scoring. */
@@ -293,6 +334,7 @@ export async function loadDashboardFromCache(
     scoring: Record<string, number> | null,
   ): RosterPlayer[] => {
     const pts = pointsByTeam.get(teamId);
+    const storedProjections = storedProjectionsByTeam.get(teamId);
     return (slotsByTeam.get(teamId) ?? []).map((s) => {
       const stats = seasonStats.get(`${teamId}:${s.playerId}`);
       // Same rule as the live path: no label until there is enough sample.
@@ -314,10 +356,12 @@ export async function loadDashboardFromCache(
         kind: s.kind,
         starter: s.kind === "starter",
         points: pts?.get(s.playerId) ?? null,
-        projectedPoints: projectedPoints(
-          projectionSources.get(s.playerId),
-          scoring,
-        ),
+        // A projection the platform already scored wins over one we would have
+        // to derive; applying Sleeper's generic stat line to an ESPN league's
+        // settings would produce a confidently wrong number.
+        projectedPoints:
+          storedProjections?.get(s.playerId) ??
+          projectedPoints(projectionSources.get(s.playerId), scoring),
         byeWeek: s.nflTeam ? (byeWeeks[s.nflTeam] ?? null) : null,
         nickname: null,
         depthChartOrder: s.depthChartOrder,
@@ -351,19 +395,29 @@ export async function loadDashboardFromCache(
     if (!mineRow) continue;
 
     const scoring = (league.scoringSettings ?? null) as Record<string, number> | null;
-    const waiver = waiverRules(
-      (league.settings ?? null) as Record<string, number> | null,
-    );
+    /*
+     * Each platform describes its waiver rules in its own vocabulary, and the
+     * two happen to disagree in a way that would go unnoticed: an ESPN league
+     * carries no `waiver_type`, so reading it with Sleeper's parser returns
+     * "priority" for every ESPN league — correct today only because both of
+     * them really are priority leagues.
+     */
+    const waiver =
+      league.platform === "espn"
+        ? espnWaiverRules(league.settings as EspnLeagueSettings | null)
+        : sleeperWaiverRules(
+            (league.settings ?? null) as Record<string, number> | null,
+          );
 
     const leagueTeams: LeagueTeam[] = leagueTeamRows.map((r) => {
       const t = r.team;
       const m = matchupsByTeamWeek.get(`${t.id}:${viewedWeek}`);
       return {
-        id: `sleeper-${league.platformLeagueId}-${t.platformTeamId}`,
+        id: teamKey(league.platform, league.platformLeagueId, t.platformTeamId),
         platformTeamId: t.platformTeamId,
         name: t.name ?? `Roster ${t.platformTeamId}`,
         ownerName: r.memberDisplayName ?? null,
-        avatar: sleeperAvatarUrl(t.avatar ?? r.memberAvatar),
+        avatar: avatarUrl(league.platform, t.avatar ?? r.memberAvatar),
         isMine: t.isMine,
         wins: t.wins,
         losses: t.losses,
@@ -409,7 +463,11 @@ export async function loadDashboardFromCache(
         opponent:
           myMatchupRow.opponentTeamId && oppLeagueTeam
             ? {
-                teamId: `sleeper-${league.platformLeagueId}-${oppLeagueTeam.team.platformTeamId}`,
+                teamId: teamKey(
+                  league.platform,
+                  league.platformLeagueId,
+                  oppLeagueTeam.team.platformTeamId,
+                ),
                 teamName:
                   teamNameById.get(myMatchupRow.opponentTeamId) ?? "Opponent",
                 score: toNumOrNull(oppRow?.points),
@@ -439,11 +497,11 @@ export async function loadDashboardFromCache(
 
     myTeams.push({
       id: myLeagueTeam.id,
-      platform: "sleeper",
-      leagueId: `sleeper-${league.platformLeagueId}`,
+      platform: league.platform,
+      leagueId: leagueKey(league.platform, league.platformLeagueId),
       platformLeagueId: league.platformLeagueId,
       leagueName: league.name,
-      leagueAvatar: sleeperAvatarUrl(league.avatar),
+      leagueAvatar: avatarUrl(league.platform, league.avatar),
       season: league.season,
       leagueStatus: league.status,
       startingSlots: startingSlots(league.rosterPositions),
@@ -524,7 +582,12 @@ export async function loadDashboardFromCache(
 
 /** Draft recaps for the cached leagues. */
 async function loadDrafts(
-  leagueRows: Array<{ id: string; platformLeagueId: string; name: string }>,
+  leagueRows: Array<{
+    id: string;
+    platform: string;
+    platformLeagueId: string;
+    name: string;
+  }>,
   teamNameById: Map<string, string>,
 ): Promise<DraftView[]> {
   const db = getDb();
@@ -584,7 +647,9 @@ async function loadDrafts(
         });
 
       return {
-        leagueId: `sleeper-${league?.platformLeagueId ?? d.leagueId}`,
+        leagueId: league
+          ? leagueKey(league.platform, league.platformLeagueId)
+          : d.leagueId,
         leagueName: league?.name ?? "League",
         season: d.season,
         status: d.status,

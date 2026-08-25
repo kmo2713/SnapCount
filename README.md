@@ -88,6 +88,9 @@ Typical timings against 7 leagues: **~2.2s** live, **~110ms** cached.
 | `npm run sync` | Full sync (auto-pulls players/byes if missing) |
 | `npm run sync -- --players` | Force a player-dump refresh |
 | `npm run sync -- --schedule` | Force a bye-week refresh |
+| `npm run sync -- --espn-ids` | Rebuild the ESPN → canonical player crosswalk |
+| `npm run espn:check` | Do the ESPN cookies open the configured leagues? |
+| `npm run espn:verify -- --season=2025` | Rebuild every ESPN score from stored starters and compare to ESPN's own |
 | `npm run sync -- --season=2025` | Sync a past season |
 | `npm run smoke` | Render every view against real data + empty data |
 | `npm run matchup -- Shlong` | Print one head-to-head to the terminal |
@@ -132,10 +135,19 @@ Three decisions make the schema hold all three platforms:
 1. **No provider id is ever a primary key.** Every upstream row carries
    `platform` plus the provider's own id, so Sleeper roster `4` and an ESPN team
    `4` cannot collide.
-2. **Players are one canonical dimension.** Sleeper's dump already carries
-   `espn_id` and `yahoo_id`, so it seeds `players` and the other platforms
-   resolve into it through `player_aliases`. A Yahoo- or ESPN-only player still
-   gets a canonical row plus an alias — nothing is dropped.
+2. **Players are one canonical dimension.** Sleeper's dump seeds `players`, and
+   the other platforms resolve into it through `player_aliases`. A Yahoo- or
+   ESPN-only player still gets a canonical row plus an alias — nothing is
+   dropped.
+
+   The `espn_id` Sleeper carries is *not* enough to do this on its own. Sleeper
+   stopped populating it for players arriving around 2021, so it covers 95 of
+   the top 200 and none of the 32 team defenses — Josh Allen has one, Bijan
+   Robinson and Ja'Marr Chase do not. `npm run sync -- --espn-ids` therefore
+   matches ESPN's own player universe on name and NFL team as well, and refuses
+   any match it cannot make unambiguously. That currently resolves 8,952 of
+   ESPN's 11,616 players, including every player on your rosters bar four and
+   every miss ESPN reports as rostered in more than 1% of leagues.
 3. **`raw` jsonb everywhere.** Anything not normalised yet is still on the row,
    so a view can reach for a field without a migration.
 
@@ -306,17 +318,69 @@ almost all of these leagues.
 
 7. Claude start/sit and trade analysis (Lineups and Trades views)
 
+**Done, continued**
+
+8. **ESPN**, end to end. Both leagues sync into the same tables as Sleeper and
+   render through the same domain model — the dashboard now loads 9 teams
+   across two platforms, and no view contains a branch on which one.
+
+   Both ESPN leagues are currently **pre-draft**, so they show their teams and
+   no rosters, exactly as the two undrafted Sleeper leagues do. They fill in
+   after the draft. See the ESPN note under *What is real vs. heuristic*.
+
+   Set `ESPN_S2`, `ESPN_SWID` and `ESPN_LEAGUE_IDS`, then:
+
+   ```bash
+   npm run espn:check                 # do the cookies open the leagues?
+   npm run sync -- --espn-ids         # build the id crosswalk, then sync
+   ```
+
+   Four things live ESPN data settled that guesswork would have got wrong:
+
+   - **`mRoster` returns nothing for these leagues.** Rosters arrive under
+     `schedule[].home/away.rosterForCurrentScoringPeriod`, i.e. from
+     `mMatchup`. The views are not independent, so the normaliser reads
+     rosters from the schedule.
+   - **`lineupSlotId` is a different enumeration from `defaultPositionId`.** A
+     kicker is position 5 but slot 17.
+   - **MONEY TIME starts a head coach every week** (slot 19, position 14).
+     Sleeper has no such thing, so head coaches and team QBs get canonical rows
+     created under `espn-<id>` ids rather than being matched to anything.
+   - **ESPN's projections arrive already scored** by the league's own settings,
+     which is the opposite of Sleeper's generic stat line. They are stored per
+     player on `matchup_players.projected_points` and used directly; applying
+     Sleeper's scoring maths to them would produce a confidently wrong number.
+   - **An undrafted ESPN league still serves a full set of rosters — last
+     season's.** Requesting 2026 for a league that has not drafted returns the
+     2025 rosters, carried forward until the draft clears them, with no flag
+     on the payload saying so. Measured, not assumed: all 382 entries returned
+     for "2026" were identical to the same teams' final 2025 rosters. So the
+     sync stores no roster for a league whose `draftDetail.drafted` is false,
+     rather than presenting last year's team as this year's.
+   - **`scoringPeriodId` is mandatory, and `mBoxscore` is what carries the
+     stats.** Omitting the period returns the season's final period and no
+     roster data at all; each request carries exactly one week, so a season is
+     assembled one request per week. And `mMatchup` alone returns roster
+     entries whose `stats` arrays are empty — points and projections only
+     appear once `mBoxscore` is requested alongside it.
+   - **`gamesPlayed` is not whether a week was played.** It reads 0 on a
+     finished week that scored 116.62. `pointsByScoringPeriod` carries an entry
+     only for periods that actually scored, so that is the signal used.
+
+   All of which is why `npm run espn:verify` exists. It rebuilds every team's
+   weekly score from the starters we stored and compares it to the score ESPN
+   reported — currently **442/442 exact** across both leagues' 2025 seasons.
+   Each of the three points above was a real bug that check caught.
+
 **Deferred, deliberately**
 
-8. **Yahoo OAuth2** and **ESPN cookie auth**. The schema, `credentials` table
-   and `player_aliases` crosswalk already accommodate both — Sleeper's player
-   dump carries `espn_id` and `yahoo_id`, so the hard part (identity across
-   platforms) is solved and costs nothing to leave unused. Worth doing only if
-   the handful of teams on those platforms turns out to matter; the integration
-   effort is real, especially Yahoo's.
+9. **Yahoo OAuth2.** Out of scope: the only Yahoo league here is college
+   fantasy football, which this app does not model. The schema keeps the
+   `yahoo` platform and `credentials` table anyway — they cost nothing empty.
 
 **Smaller gaps worth knowing about**
 
-- Two leagues are pre-draft, so Draft Recap is empty for them until they draft.
+- Four leagues are pre-draft (two Sleeper, both ESPN), so their rosters and
+  Draft Recap stay empty until they draft.
 - Projections only exist for the current and upcoming week — Sleeper does not
   publish them further out.

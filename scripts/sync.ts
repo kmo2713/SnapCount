@@ -5,6 +5,7 @@
  *   --live       current-week scores only (~1s) — the game-day fast path
  *   --players    refresh the 15MB Sleeper player dump (implied on first run)
  *   --schedule   re-pull bye weeks from ESPN's public scoreboard
+ *   --espn-ids   rebuild the ESPN -> canonical player crosswalk
  *   --season=X   sync a season other than the current one
  *   --week=N     limit matchup pulls to weeks 1..N
  */
@@ -46,6 +47,7 @@ async function main() {
     : await syncAll({
         includePlayers: flag("players"),
         includeSchedule: flag("schedule"),
+        includeEspnIds: flag("espn-ids"),
         season: value("season"),
         weeks,
       });

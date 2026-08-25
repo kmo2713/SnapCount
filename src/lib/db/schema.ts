@@ -435,8 +435,21 @@ export const matchupPlayers = pgTable(
       .notNull()
       .references(() => players.id, { onDelete: "cascade" }),
     points: real(),
+    /**
+     * Projected points, already scored by this league's own settings.
+     *
+     * Only ESPN populates this: it publishes a per-player projection that has
+     * the league's scoring applied, so there is nothing left to compute. The
+     * Sleeper path instead stores a raw stat line in `player_projections` and
+     * multiplies it through each league's `scoring_settings` at read time,
+     * because Sleeper's projection is generic across leagues. Both roads end
+     * at the same domain field.
+     */
+    projectedPoints: real(),
     isStarter: boolean().notNull().default(false),
     slotIndex: integer(),
+    /** Lineup slot label for platforms that report it per player, e.g. "FLEX". */
+    slotPosition: text(),
   },
   (t) => [
     uniqueIndex("matchup_players_matchup_player_uq").on(t.matchupId, t.playerId),

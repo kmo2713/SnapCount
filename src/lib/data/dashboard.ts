@@ -6,11 +6,23 @@
  * provisioned and keeps working if a sync has not run yet, without the views
  * knowing which path they got.
  */
-import { hasDatabase } from "@/lib/env";
+import { env, hasDatabase } from "@/lib/env";
 import { describeDbError } from "@/lib/db/errors";
 import type { DashboardData } from "@/lib/domain/types";
 import { loadDashboardLive, type LoadOptions } from "./live";
 import { loadDashboardFromCache } from "./repo";
+
+/**
+ * Live mode reads Sleeper only. ESPN leagues live in the cache or nowhere, so
+ * a configured ESPN account silently losing its leagues would look like a bug
+ * rather than a limitation — say so instead.
+ */
+function liveModeWarnings(): string[] {
+  if (env.espnLeagueIds.length === 0) return [];
+  return [
+    `${env.espnLeagueIds.length} ESPN league(s) are configured but live mode reads Sleeper only — run \`npm run sync\` to see them.`,
+  ];
+}
 
 export async function loadDashboard(
   options: LoadOptions = {},
@@ -27,6 +39,7 @@ export async function loadDashboard(
         warnings: [
           ...live.warnings,
           `Postgres cache unavailable, served live from Sleeper: ${describeDbError(err)}`,
+          ...liveModeWarnings(),
         ],
       };
     }
@@ -37,6 +50,7 @@ export async function loadDashboard(
       warnings: [
         ...live.warnings,
         "Cache is empty — served live from Sleeper. Run `npm run sync` to populate Postgres.",
+        ...liveModeWarnings(),
       ],
     };
   }
@@ -47,6 +61,7 @@ export async function loadDashboard(
     warnings: [
       ...live.warnings,
       "No DATABASE_URL configured — running in live mode without the Postgres cache.",
+      ...liveModeWarnings(),
     ],
   };
 }

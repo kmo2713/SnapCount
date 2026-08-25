@@ -30,6 +30,11 @@ export type ByeWeekMap = Record<string, number>;
 /**
  * ESPN and Sleeper disagree on a handful of abbreviations. Normalise to
  * Sleeper's spelling, since that is what our player rows carry.
+ *
+ * Washington is the only live disagreement, and it is not cosmetic: keyed on
+ * ESPN's spelling, that team's players and defense fail to join to ours at all.
+ * Shared with the ESPN fantasy client so both consumers of ESPN's spelling
+ * agree on the answer.
  */
 const ESPN_TO_SLEEPER_ABBR: Record<string, string> = {
   WSH: "WAS",
@@ -38,7 +43,7 @@ const ESPN_TO_SLEEPER_ABBR: Record<string, string> = {
   JAX: "JAX",
 };
 
-function normalizeAbbr(abbr: string): string {
+export function normalizeEspnAbbr(abbr: string): string {
   return ESPN_TO_SLEEPER_ABBR[abbr] ?? abbr;
 }
 
@@ -68,7 +73,7 @@ export async function fetchByeWeeks(season: string): Promise<ByeWeekMap> {
     if (result.status !== "fulfilled") continue;
     for (const team of result.value.teams) {
       if (!team.abbreviation) continue;
-      byes[normalizeAbbr(team.abbreviation)] = result.value.week;
+      byes[normalizeEspnAbbr(team.abbreviation)] = result.value.week;
     }
   }
 

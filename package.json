@@ -21,6 +21,8 @@
     "matchup": "tsx scripts/inspect-matchup.ts",
     "sync:live": "tsx scripts/sync.ts --live",
     "cost": "tsx scripts/estimate-cost.ts",
+    "espn:check": "tsx scripts/espn-check.ts",
+    "espn:verify": "tsx scripts/espn-verify.ts",
     "prompt": "tsx scripts/show-prompt.ts"
   },
   "dependencies": {
