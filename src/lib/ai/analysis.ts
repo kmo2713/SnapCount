@@ -60,7 +60,10 @@ function describePlayer(p: RosterPlayer, includeSlot = false): string {
   bits.push(p.projectedPoints != null ? `proj ${p.projectedPoints}` : "proj —");
   if (p.status && p.status !== "Active") bits.push(`STATUS: ${p.status}`);
   if (p.byeWeek != null) bits.push(`bye W${p.byeWeek}`);
-  if (p.seasonAvgPoints != null && p.seasonSamples > 0) {
+  // Only send a scoring average once there is actual scoring. In preseason
+  // every player reads "avg 0 over 1w", which is not a signal — it is noise
+  // that invites the model to conclude nobody is producing.
+  if (p.seasonAvgPoints != null && p.seasonSamples > 0 && p.seasonAvgPoints > 0) {
     bits.push(`avg ${p.seasonAvgPoints} over ${p.seasonSamples}w`);
   }
   if (p.searchRank != null && p.searchRank < 100_000) {

@@ -20,7 +20,8 @@
     "db:reset": "drizzle-kit drop",
     "matchup": "tsx scripts/inspect-matchup.ts",
     "sync:live": "tsx scripts/sync.ts --live",
-    "cost": "tsx scripts/estimate-cost.ts"
+    "cost": "tsx scripts/estimate-cost.ts",
+    "prompt": "tsx scripts/show-prompt.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
