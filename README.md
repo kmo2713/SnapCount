@@ -237,15 +237,20 @@ Two scopes on deliberately different schedules:
 | `?scope=live` | ~1s | Every few minutes during game windows. Current week's scores only. |
 | `?scope=full` | ~7s | Twice a day. Rosters, drafts, projections, trending. |
 
-`vercel.json` already encodes both. **Check your Vercel plan's cron limits** —
-frequency caps are much tighter on Hobby than Pro, and the 5-minute game-day
-schedule is the first thing to break.
+Scheduling runs from **GitHub Actions** (`.github/workflows/sync.yml`), not
+Vercel Cron. Vercel's Hobby plan caps cron frequency and refuses the 5-minute
+game-day schedule outright, so `vercel.json` carries only the region pin.
 
-If the schedule is restricted, use the included GitHub Actions workflow instead
-(`.github/workflows/sync.yml`) — it is free and plan-independent, since the sync
-endpoint is just an authenticated HTTP call. Add two repository secrets,
-`SNAP_COUNT_URL` and `SYNC_SECRET`, and disable the `crons` block in
-`vercel.json` so they do not both run.
+Actions is free, has no frequency cap, and keeps every schedule in one file.
+Add two repository secrets under **Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+| --- | --- |
+| `SNAP_COUNT_URL` | deployment URL, e.g. `https://snapcount.vercel.app` |
+| `SYNC_SECRET` | same value as the deployment's `SYNC_SECRET` |
+
+Run one by hand from the **Actions** tab → *Sync* → *Run workflow*, picking the
+`full` or `live` scope.
 
 Trigger one by hand any time:
 
