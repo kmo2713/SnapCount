@@ -19,7 +19,8 @@
     "smoke": "tsx scripts/smoke-views.tsx",
     "db:reset": "drizzle-kit drop",
     "matchup": "tsx scripts/inspect-matchup.ts",
-    "sync:live": "tsx scripts/sync.ts --live"
+    "sync:live": "tsx scripts/sync.ts --live",
+    "cost": "tsx scripts/estimate-cost.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
