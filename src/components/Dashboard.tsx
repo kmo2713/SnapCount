@@ -130,7 +130,10 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
         <div className="sc-header-top">
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
             <span className="sc-wordmark">Snap Count</span>
-            <span style={{ fontSize: 12, color: "var(--sc-text-muted)" }}>
+            <span
+              className="sc-tagline"
+              style={{ fontSize: 12, color: "var(--sc-text-muted)" }}
+            >
               all your fantasy teams, one screen
             </span>
           </div>

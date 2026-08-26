@@ -97,6 +97,7 @@ Typical timings against 7 leagues: **~2.2s** live, **~110ms** cached.
 | `npm run sync:live` | Current-week scores only (~1s, the game-day job) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint (`next lint` was removed in Next 16) |
+| `npm run build` | Production build |
 | `npm run db:generate` / `db:migrate` | Create / apply migrations |
 | `npm run db:studio` | Browse the cache |
 

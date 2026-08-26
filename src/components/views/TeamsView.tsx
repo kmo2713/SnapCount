@@ -55,8 +55,8 @@ export function TeamsView({
   }
 
   return (
-    <div style={{ display: "flex", gap: 18, alignItems: "flex-start" }}>
-      <aside style={{ width: 210, flexShrink: 0, position: "sticky", top: 0 }}>
+    <div className="sc-split" style={{ gap: 18 }}>
+      <aside className="sc-split-aside">
         <div className="sc-section-title">Your teams</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {teams.map((t) => (

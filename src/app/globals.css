@@ -69,7 +69,14 @@ body {
 .sc-app {
   display: flex;
   flex-direction: column;
+  /*
+   * dvh, with vh as the fallback for browsers that lack it. On mobile Safari
+   * 100vh is the viewport *without* the address bar, so the shell ends up
+   * taller than the screen and the bottom of the content sits under the
+   * browser chrome. dvh tracks the visible area as that chrome hides.
+   */
   height: 100vh;
+  height: 100dvh;
   min-height: 0;
 }
 
@@ -337,17 +344,126 @@ table.sc-table tbody tr:hover {
   gap: 12px;
 }
 
-@media (max-width: 720px) {
-  :root {
-    --sc-sidebar-width: 56px;
-  }
+/* ------------------------------------------------- responsive primitives -- */
 
-  .sc-nav-btn span {
-    display: none;
+/*
+ * These live in CSS rather than inline styles for one reason: an inline style
+ * beats any selector short of !important, so a layout property set in JSX
+ * cannot be overridden by a media query. Anything that has to change on a
+ * phone belongs here.
+ */
+
+/** Two roster columns with a divider between them. */
+.sc-versus {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+}
+
+.sc-versus-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/** A list beside a detail pane. */
+.sc-split {
+  display: flex;
+  align-items: flex-start;
+}
+
+.sc-split-aside {
+  width: 210px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+}
+
+/* --------------------------------------------------------------- mobile -- */
+
+/*
+ * A phone gets the same information, laid out down the screen instead of
+ * across it. Nothing is hidden except the tagline: the point of this app is
+ * seeing every league at once, and a mobile view that drops half of them
+ * would defeat it.
+ */
+@media (max-width: 720px) {
+  /*
+   * The nav becomes a horizontal strip under the header rather than a rail.
+   * It used to collapse to a 56px icon-only column, which on a phone meant
+   * thirteen unlabelled glyphs and a fifth of the width gone.
+   */
+  .sc-body {
+    flex-direction: column;
   }
 
   .sc-sidebar {
-    padding: 10px 6px;
+    width: auto;
+    flex-direction: row;
+    gap: 6px;
+    padding: 8px 12px;
+    border-right: none;
+    border-bottom: 1px solid var(--sc-border);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .sc-sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sc-nav-btn {
+    flex: 0 0 auto;
+    /* Keeps the tap target around 36px without making the strip tall. */
+    padding: 9px 12px;
+  }
+
+  .sc-header {
+    padding: 12px 14px 10px;
+  }
+
+  .sc-content {
+    padding: 14px 14px 32px;
+  }
+
+  /* The strapline is decoration; the wordmark already says what this is. */
+  .sc-tagline {
+    display: none;
+  }
+
+  /* Head-to-head and trade layouts stack rather than squeezing two roster
+     columns into 170px each. */
+  .sc-versus {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-versus-divider {
+    display: none;
+  }
+
+  /* A sidebar-plus-detail view becomes one column. */
+  .sc-split {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .sc-split-aside {
+    width: 100%;
+    position: static;
+  }
+}
+
+@media (max-width: 400px) {
+  .sc-wordmark {
+    font-size: 18px;
+  }
+
+  .sc-header,
+  .sc-content {
+    padding-left: 10px;
+    padding-right: 10px;
   }
 }
 

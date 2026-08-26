@@ -143,16 +143,9 @@ function MatchupCard({
         <PlatformBadge platform={detail.platform} />
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
-          alignItems: "center",
-          gap: 12,
-        }}
-      >
+      <div className="sc-versus" style={{ alignItems: "center", gap: 12 }}>
         <SideSummary team={detail.mine} align="left" mine />
-        <div style={{ textAlign: "center", flexShrink: 0 }}>
+        <div className="sc-versus-divider" style={{ textAlign: "center" }}>
           <div
             className="sc-label"
             style={{ fontSize: 10, color: "var(--sc-text-muted)" }}
@@ -321,18 +314,14 @@ function MatchupDetailView({
 
       {/* Scoreboard header */}
       <div
-        className="sc-card"
-        style={{
-          padding: 16,
-          marginBottom: 8,
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
-          alignItems: "center",
-          gap: 14,
-        }}
+        className="sc-card sc-versus"
+        style={{ padding: 16, marginBottom: 8, alignItems: "center", gap: 14 }}
       >
         <TeamHeader team={detail.mine} align="left" mine />
-        <div className="sc-label" style={{ fontSize: 11, textAlign: "center" }}>
+        <div
+          className="sc-label sc-versus-divider"
+          style={{ fontSize: 11, textAlign: "center" }}
+        >
           vs
         </div>
         {detail.opponent ? (

@@ -172,14 +172,7 @@ export function TradesView({ data }: { data: DashboardData }) {
           <div className="sc-section-title">Proposed trade</div>
 
           {/* The trade itself, laid out as it would actually happen. */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr auto 1fr",
-              gap: 14,
-              alignItems: "stretch",
-            }}
-          >
+          <div className="sc-versus" style={{ gap: 14, alignItems: "stretch" }}>
             <TradeLeg
               heading={`${opponent?.name ?? "They"} receive`}
               players={outgoingPlayers}
@@ -189,13 +182,8 @@ export function TradesView({ data }: { data: DashboardData }) {
             />
 
             <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--sc-text-muted)",
-                flexShrink: 0,
-              }}
+              className="sc-versus-divider"
+              style={{ color: "var(--sc-text-muted)" }}
               aria-hidden="true"
             >
               <ArrowLeftRight size={20} />
