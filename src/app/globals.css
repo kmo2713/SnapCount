@@ -366,6 +366,14 @@ table.sc-table tbody tr:hover {
   flex-shrink: 0;
 }
 
+/** The badge pair on a scoreboard tile; hidden on phones. */
+.sc-scoreboard-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 /** A list beside a detail pane. */
 .sc-split {
   display: flex;
@@ -408,6 +416,13 @@ table.sc-table tbody tr:hover {
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    /*
+     * Fades the trailing edge so the strip reads as scrollable rather than
+     * clipped. Both properties, since only WebKit ships the unprefixed one.
+     */
+    -webkit-mask-image: linear-gradient(to right, #000 88%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 88%, transparent 100%);
   }
 
   .sc-sidebar::-webkit-scrollbar {
@@ -415,13 +430,49 @@ table.sc-table tbody tr:hover {
   }
 
   .sc-nav-btn {
+    /*
+     * The rail sets width:100% so buttons fill a vertical column. Left alone
+     * in a horizontal strip that makes every pill a full screen wide, which is
+     * why only one destination was visible at a time.
+     */
+    width: auto;
     flex: 0 0 auto;
     /* Keeps the tap target around 36px without making the strip tall. */
-    padding: 9px 12px;
+    padding: 9px 13px;
+    border: 1px solid var(--sc-border);
+    scroll-snap-align: start;
+  }
+
+  .sc-nav-btn.active {
+    border-color: var(--sc-accent-border);
   }
 
   .sc-header {
-    padding: 12px 14px 10px;
+    padding: 10px 14px 8px;
+  }
+
+  /*
+   * The header used to take a third of the screen before any content. The
+   * scoreboard tiles lose their record line and shrink; the full picture is
+   * one tap away on Overview.
+   */
+  .sc-header-top {
+    gap: 8px;
+  }
+
+  /* !important because these are set inline, which no selector can outrank. */
+  .sc-scoreboard-tile {
+    min-width: 128px !important;
+    padding: 7px 10px !important;
+  }
+
+  /*
+   * The record and score stay — they are the whole point of a scoreboard. The
+   * badges go: they are repeated on every card in Overview, and here they were
+   * taking more width than the team name.
+   */
+  .sc-scoreboard-badges {
+    display: none;
   }
 
   .sc-content {
@@ -431,6 +482,36 @@ table.sc-table tbody tr:hover {
   /* The strapline is decoration; the wordmark already says what this is. */
   .sc-tagline {
     display: none;
+  }
+
+  /*
+   * Wide tables still scroll sideways — a slot-by-slot lineup does not stack
+   * into anything readable. What makes that feel broken rather than deliberate
+   * is losing your place, so the identifying column stays pinned while the
+   * numbers move under it.
+   */
+  table.sc-table th:first-child,
+  table.sc-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--sc-surface);
+  }
+
+  .sc-table-scroll {
+    /* Same trailing fade as the nav: says "there is more this way". */
+    -webkit-mask-image: linear-gradient(to right, #000 92%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 92%, transparent 100%);
+  }
+
+  /* Columns worth losing before the ones that identify the row. */
+  .sc-col-optional {
+    display: none;
+  }
+
+  table.sc-table th,
+  table.sc-table td {
+    padding: 8px 8px;
   }
 
   /* Head-to-head and trade layouts stack rather than squeezing two roster

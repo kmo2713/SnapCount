@@ -163,13 +163,13 @@ export function PlayersView({ data }: { data: DashboardData }) {
               <tr>
                 <th>Pos</th>
                 <th>Player</th>
-                <th>NFL team</th>
+                <th className="sc-col-optional">NFL team</th>
                 <th>Bye</th>
                 <th>Slot</th>
                 <th>Status</th>
-                <th>Trend</th>
+                <th className="sc-col-optional">Trend</th>
                 <th style={{ textAlign: "right" }}>Avg</th>
-                <th>Fantasy team</th>
+                <th className="sc-col-optional">Fantasy team</th>
               </tr>
             </thead>
             <tbody>
@@ -181,7 +181,9 @@ export function PlayersView({ data }: { data: DashboardData }) {
                   <td>
                     <PlayerName name={r.name} nickname={r.nickname} />
                   </td>
-                  <td style={{ color: "var(--sc-text-muted)" }}>{r.nflTeam || "—"}</td>
+                  <td className="sc-col-optional" style={{ color: "var(--sc-text-muted)" }}>
+                    {r.nflTeam || "—"}
+                  </td>
                   <td className="sc-mono" style={{ color: "var(--sc-text-muted)" }}>
                     {r.byeWeek ?? "—"}
                   </td>
@@ -205,7 +207,7 @@ export function PlayersView({ data }: { data: DashboardData }) {
                   <td>
                     <StatusTag status={r.status} bodyPart={r.injuryBodyPart} />
                   </td>
-                  <td>
+                  <td className="sc-col-optional">
                     <ConsistencyTag
                       consistency={r.consistency}
                       samples={r.seasonSamples}
@@ -214,7 +216,7 @@ export function PlayersView({ data }: { data: DashboardData }) {
                   <td className="sc-mono" style={{ textAlign: "right" }}>
                     {fmt(r.seasonAvgPoints)}
                   </td>
-                  <td>
+                  <td className="sc-col-optional">
                     <div
                       style={{ display: "flex", alignItems: "center", gap: 6 }}
                     >

@@ -5,7 +5,7 @@
  * nav, and a single scrolling content pane — the prototype's layout, now
  * driven by real data.
  */
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -80,6 +80,21 @@ const NAV: Array<{
 export function Dashboard({ initialData }: { initialData: DashboardData }) {
   const [data, setData] = useState(initialData);
   const [tab, setTab] = useState<TabId>("overview");
+
+  /*
+   * On a phone the nav is a horizontal strip, so the destination you just
+   * chose can sit off-screen. Pull it into view whenever it changes. On
+   * desktop the rail does not scroll horizontally and this is a no-op.
+   */
+  const navRef = useRef<HTMLElement | null>(null);
+  const activeNavRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    const active = activeNavRef.current;
+    if (!nav || !active || nav.scrollWidth <= nav.clientWidth) return;
+    active.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [tab]);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   /** Which team’s head-to-head is open. Null shows the matchup list. */
   const [matchupTeamId, setMatchupTeamId] = useState<string | null>(null);
@@ -189,7 +204,7 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
           {data.teams.map((t) => (
             <button
               key={t.id}
-              className="sc-card sc-hover"
+              className="sc-card sc-hover sc-scoreboard-tile"
               // A scoreboard tile is about the game, so it opens the head-to-head
               // when there is one and falls back to the roster when there is not.
               onClick={() => (t.matchup ? openMatchup(t.id) : openTeam(t.id))}
@@ -223,7 +238,7 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
                     {t.teamName}
                   </span>
                 </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                <span className="sc-scoreboard-badges">
                   <FormatBadge format={t.leagueFormat} />
                   <PlatformBadge platform={t.platform} />
                 </span>
@@ -251,10 +266,11 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
       </header>
 
       <div className="sc-body">
-        <nav className="sc-sidebar">
+        <nav className="sc-sidebar" ref={navRef}>
           {NAV.map((n) => (
             <button
               key={n.id}
+              ref={tab === n.id ? activeNavRef : undefined}
               className={`sc-nav-btn ${tab === n.id ? "active" : ""}`}
               onClick={() => setTab(n.id)}
               aria-current={tab === n.id ? "page" : undefined}
