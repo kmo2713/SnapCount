@@ -252,7 +252,7 @@ Import the repo, then set environment variables:
 | `SYNC_SECRET` | `openssl rand -hex 32` |
 | `ANTHROPIC_API_KEY` | for the *Ask Claude* buttons — omit it and they explain themselves instead |
 | `ESPN_S2` / `ESPN_SWID` | ESPN cookies, if you have ESPN leagues |
-| `ESPN_LEAGUE_IDS` | comma-separated, e.g. `1597896928,64251973` |
+| `ESPN_LEAGUE_IDS` | optional — leagues are discovered from the account |
 
 There is no `CRON_SECRET`: scheduling moved to GitHub Actions, which
 authenticates with `SYNC_SECRET` directly.
@@ -377,6 +377,10 @@ almost all of these leagues.
      for "2026" were identical to the same teams' final 2025 rosters. So the
      sync stores no roster for a league whose `draftDetail.drafted` is false,
      rather than presenting last year's team as this year's.
+   - **There is no "list my leagues" endpoint on the fantasy API**, which is
+     why league ids began as a hand-kept env var — and why a league joined
+     afterwards stayed invisible. ESPN's separate *fan* API does know, so the
+     list now maintains itself and `ESPN_LEAGUE_IDS` is only a pin or fallback.
    - **`scoringPeriodId` is mandatory, and `mBoxscore` is what carries the
      stats.** Omitting the period returns the season's final period and no
      roster data at all; each request carries exactly one week, so a season is

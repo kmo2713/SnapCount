@@ -91,6 +91,7 @@ export async function syncEspnLeaguesInner(
   const warnings: string[] = [];
   const stats = {
     leagues: 0,
+    discovered: 0,
     teams: 0,
     rosterSlots: 0,
     matchups: 0,
@@ -101,8 +102,41 @@ export async function syncEspnLeaguesInner(
   const credentials = espnCredentials();
   const season = options.season ?? env.season ?? String(new Date().getFullYear());
 
-  if (env.espnLeagueIds.length === 0) {
-    return { stats, warnings: ["No ESPN_LEAGUE_IDS configured; nothing to sync."] };
+  /*
+   * Leagues are discovered from the account rather than read off a hand-kept
+   * list, so a league joined mid-season shows up on the next sync instead of
+   * staying invisible until someone edits an env var. ESPN_LEAGUE_IDS still
+   * works and is merged in — useful for a league the fan API does not return,
+   * and as a fallback if discovery fails.
+   */
+  const configured = env.espnLeagueIds;
+  let discovered: string[] = [];
+  try {
+    discovered = await espn.getMyLeagueIds(season, credentials);
+  } catch (err) {
+    warnings.push(
+      `Could not list ESPN leagues for this account (${err instanceof Error ? err.message : String(err)}); using ESPN_LEAGUE_IDS only.`,
+    );
+  }
+
+  const leagueIds = [...new Set([...discovered, ...configured])];
+
+  const undiscovered = configured.filter((id) => !discovered.includes(id));
+  if (discovered.length > 0 && undiscovered.length > 0) {
+    warnings.push(
+      `ESPN_LEAGUE_IDS lists ${undiscovered.join(", ")}, which this account does not appear to be in for ${season}.`,
+    );
+  }
+
+  if (leagueIds.length === 0) {
+    return {
+      stats,
+      warnings: [
+        credentials
+          ? `No ESPN leagues found for this account in ${season}.`
+          : "No ESPN cookies configured; nothing to sync.",
+      ],
+    };
   }
 
   /* -- the ESPN -> canonical player map, built by syncEspnAliases -- */
@@ -145,7 +179,9 @@ export async function syncEspnLeaguesInner(
     accountId = account.id;
   }
 
-  for (const leagueId of env.espnLeagueIds) {
+  stats.discovered = discovered.length;
+
+  for (const leagueId of leagueIds) {
     let payload: EspnLeagueResponse;
     try {
       payload = await espn.getLeague<EspnLeagueResponse>(

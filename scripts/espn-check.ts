@@ -47,10 +47,28 @@ async function main() {
     console.log(`Cookies:      configured (espn_s2 …${tail}, SWID ${credentials.swid})`);
   }
 
-  if (env.espnLeagueIds.length === 0) {
+  /* Same resolution the sync uses: discovered from the account, plus any
+     ids pinned in ESPN_LEAGUE_IDS. */
+  let discovered: string[] = [];
+  try {
+    discovered = await espn.getMyLeagueIds(season, credentials);
+    console.log(`Discovered:   ${discovered.length} league(s) on this account`);
+  } catch (err) {
+    console.log(
+      `Discovered:   failed (${err instanceof Error ? err.message : String(err)})`,
+    );
+  }
+  if (env.espnLeagueIds.length > 0) {
+    console.log(`Pinned:       ${env.espnLeagueIds.join(", ")} (ESPN_LEAGUE_IDS)`);
+  }
+
+  const leagueIds = [...new Set([...discovered, ...env.espnLeagueIds])];
+
+  if (leagueIds.length === 0) {
     console.error(
-      "\nNo ESPN_LEAGUE_IDS set. Add a comma-separated list to .env, e.g.\n" +
-        "  ESPN_LEAGUE_IDS=1597896928,64251973",
+      "\nNo ESPN leagues found. Either the cookies are wrong, or this account\n" +
+        "is not in a fantasy football league this season. You can also pin ids\n" +
+        "explicitly: ESPN_LEAGUE_IDS=1597896928,64251973",
     );
     process.exitCode = 1;
     return;
@@ -58,7 +76,7 @@ async function main() {
 
   let failures = 0;
 
-  for (const leagueId of env.espnLeagueIds) {
+  for (const leagueId of leagueIds) {
     console.log(`\n--- league ${leagueId} ---`);
     try {
       const league = await espn.getLeague<LeagueProbe>(
@@ -105,9 +123,7 @@ async function main() {
     }
   }
 
-  console.log(
-    `\n${env.espnLeagueIds.length - failures}/${env.espnLeagueIds.length} leagues readable.`,
-  );
+  console.log(`\n${leagueIds.length - failures}/${leagueIds.length} leagues readable.`);
   if (failures > 0) process.exitCode = 1;
 }
 

@@ -18,12 +18,16 @@
  */
 import type {
   EspnErrorResponse,
+  EspnFanResponse,
   EspnPlayer,
   EspnProTeam,
   EspnSeasonResponse,
 } from "./types";
 
 const BASE_URL = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl";
+
+/** The account's own follows live on a different host again. */
+const FAN_BASE_URL = "https://fan.api.espn.com/apis/v2";
 
 /**
  * Comfortably above the ~11.6k players ESPN currently returns. The header is
@@ -62,11 +66,13 @@ interface FetchOptions {
   filter?: unknown;
   /** Private-league reads only; the public endpoints ignore this. */
   credentials?: EspnCredentials | null;
+  /** Override the host — the fan API lives elsewhere. */
+  baseUrl?: string;
 }
 
 async function fetchJson<T>(
   path: string,
-  { retries = 2, filter, credentials }: FetchOptions = {},
+  { retries = 2, filter, credentials, baseUrl = BASE_URL }: FetchOptions = {},
 ): Promise<T> {
   const headers: Record<string, string> = { accept: "application/json" };
   if (filter !== undefined) headers["x-fantasy-filter"] = JSON.stringify(filter);
@@ -80,7 +86,7 @@ async function fetchJson<T>(
     try {
       // These payloads run to megabytes, well past Next's data-cache ceiling;
       // the sync job persists to Postgres instead of leaning on a fetch cache.
-      const res = await fetch(`${BASE_URL}${path}`, {
+      const res = await fetch(`${baseUrl}${path}`, {
         headers,
         cache: "no-store",
       });
@@ -145,6 +151,41 @@ export const espn = {
       `/seasons/${season}?view=proTeamSchedules_wl`,
     );
     return res.settings?.proTeams ?? [];
+  },
+
+  /**
+   * Every fantasy football league this account is in, for one season.
+   *
+   * ESPN has no "list my leagues" endpoint on the fantasy API, which is why
+   * league ids started life as a hand-maintained env var — and why a league
+   * joined after that list was written stayed invisible. The fan API does know,
+   * so the list can maintain itself.
+   *
+   * Returns league ids as strings, to match how they are stored everywhere
+   * else. Needs the same cookies as a private league read.
+   */
+  getMyLeagueIds: async (
+    season: string,
+    credentials: EspnCredentials | null,
+  ): Promise<string[]> => {
+    if (!credentials) return [];
+    const res = await fetchJson<EspnFanResponse>(
+      `/fans/${encodeURIComponent(credentials.swid)}?featureFlags=expandAthlete&displayEvents=false&displayNow=false&recUsage=false`,
+      { baseUrl: FAN_BASE_URL, credentials },
+    );
+
+    const ids = new Set<string>();
+    for (const pref of res.preferences ?? []) {
+      const entry = pref.metaData?.entry;
+      if (!entry) continue;
+      // Most preferences are team or athlete follows; only FFL entries are ours.
+      if ((entry.abbrev ?? "").toUpperCase() !== "FFL") continue;
+      if (String(entry.seasonId ?? "") !== season) continue;
+      for (const group of entry.groups ?? []) {
+        if (group.groupId != null) ids.add(String(group.groupId));
+      }
+    }
+    return [...ids];
   },
 
   /**

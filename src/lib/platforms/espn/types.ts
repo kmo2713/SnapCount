@@ -43,6 +43,29 @@ export interface EspnSeasonResponse {
 }
 
 /**
+ * The account's followed things, from ESPN's "fan" API.
+ *
+ * It is a mixed bag — most entries are team and athlete follows. A fantasy
+ * league is `typeId: 9` with an `entry` whose `abbrev` is FFL; everything else
+ * is noise for our purposes.
+ */
+export interface EspnFanResponse {
+  preferences?: Array<{
+    typeId?: number;
+    id?: string;
+    metaData?: {
+      entry?: {
+        seasonId?: number;
+        gameId?: number;
+        /** "FFL" for fantasy football. */
+        abbrev?: string;
+        groups?: Array<{ groupId?: number | string; groupName?: string }>;
+      };
+    };
+  }>;
+}
+
+/**
  * ESPN's error envelope. `details[].type` is the machine-readable part —
  * AUTH_LEAGUE_NOT_VISIBLE is what expired cookies look like.
  */

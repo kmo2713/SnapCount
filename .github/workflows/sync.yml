@@ -8,8 +8,17 @@
 #
 # Setup:
 #   1. Repository -> Settings -> Secrets and variables -> Actions
-#   2. Add secret  SNAP_COUNT_URL   e.g. https://snap-count.vercel.app
+#   2. Add secret  SNAP_COUNT_URL   your *production domain*, not a
+#                                   per-deployment URL — those are immutable and
+#                                   pin the sync to one frozen build.
 #   3. Add secret  SYNC_SECRET      same value as the deployment's SYNC_SECRET
+#   4. Optional    VERCEL_BYPASS    only if Vercel Deployment Protection covers
+#                                   the production domain. Vercel rejects the
+#                                   request at the edge before the app ever sees
+#                                   SYNC_SECRET, so the failure looks exactly
+#                                   like a wrong secret. Generate it under
+#                                   Project -> Settings -> Deployment Protection
+#                                   -> Protection Bypass for Automation.
 #
 # Note: GitHub's scheduler is best-effort and runs late under load — fine for a
 # fantasy dashboard, not for anything that needs a hard guarantee.
@@ -45,6 +54,7 @@ jobs:
         env:
           URL: ${{ secrets.SNAP_COUNT_URL }}
           SECRET: ${{ secrets.SYNC_SECRET }}
+          BYPASS: ${{ secrets.VERCEL_BYPASS }}
           # Manual runs use the chosen scope. Scheduled runs use the full sync
           # only on the twice-daily schedule; everything else is live scores.
           SCOPE: >-
@@ -59,11 +69,21 @@ jobs:
 
           echo "Running $SCOPE sync against $URL"
 
+          # Only sent when set, so this works unchanged on an unprotected
+          # deployment. Vercel strips the header before the request reaches the
+          # app, and the app's own SYNC_SECRET check still has to pass.
+          bypass_header=()
+          if [ -n "$BYPASS" ]; then
+            bypass_header=(-H "x-vercel-protection-bypass: $BYPASS")
+            echo "Sending Vercel protection bypass header."
+          fi
+
           # --fail-with-body so a non-2xx still prints the API's error message.
           http_code=$(curl -sS --fail-with-body \
             --max-time 300 \
             -o response.json -w '%{http_code}' \
             -H "Authorization: Bearer $SECRET" \
+            "${bypass_header[@]}" \
             "$URL/api/sync?scope=$SCOPE") || true
 
           echo "HTTP $http_code"
@@ -72,5 +92,11 @@ jobs:
 
           case "$http_code" in
             2*) echo "Sync succeeded." ;;
+            401)
+              echo "::error::401. If the body above is Vercel's SSO page rather"
+              echo "::error::than the app's JSON, Deployment Protection is"
+              echo "::error::blocking this — set the VERCEL_BYPASS secret."
+              exit 1
+              ;;
             *)  echo "::error::Sync failed with HTTP $http_code"; exit 1 ;;
           esac
