@@ -8,8 +8,10 @@
  * Two things differ from the Sleeper job, both forced by ESPN rather than
  * chosen:
  *
- *  - There is no "list my leagues" endpoint, so league ids come from
- *    ESPN_LEAGUE_IDS rather than being discovered from the account.
+ *  - There is no "list my leagues" endpoint on the fantasy API, so league
+ *    ids come from the separate fan API, merged with anything pinned in
+ *    ESPN_LEAGUE_IDS. That lists practice drafts alongside real leagues, so
+ *    the mocks are filtered out here rather than at discovery.
  *  - Rosters and per-player scoring come from the schedule (`mMatchup`), since
  *    `mRoster` returns nothing for these leagues.
  */
@@ -21,6 +23,7 @@ import { EspnApiError, espn } from "@/lib/platforms/espn/client";
 import type { EspnLeagueResponse } from "@/lib/platforms/espn/league-types";
 import {
   actualPoints,
+  isMockLeague,
   isMyTeam,
   leagueStatus,
   pairingsFor,
@@ -92,6 +95,7 @@ export async function syncEspnLeaguesInner(
   const stats = {
     leagues: 0,
     discovered: 0,
+    mocksSkipped: 0,
     teams: 0,
     rosterSlots: 0,
     matchups: 0,
@@ -196,6 +200,26 @@ export async function syncEspnLeaguesInner(
     }
 
     const name = payload.settings?.name?.trim() || `ESPN league ${leagueId}`;
+
+    /*
+     * Practice drafts are dropped before anything is written. Discovery
+     * cannot avoid finding them — the fan API lists a mock exactly the way it
+     * lists a real league — so the filter belongs here, where the settings
+     * that give it away have already been fetched. Pinning one in
+     * ESPN_LEAGUE_IDS does not override this; it says so instead of quietly
+     * ignoring the request.
+     */
+    if (isMockLeague(payload.settings)) {
+      stats.mocksSkipped++;
+      if (configured.includes(leagueId)) {
+        warnings.push(
+          `ESPN_LEAGUE_IDS pins ${leagueId}, but ESPN reports it as a practice draft ` +
+            `("${name}") rather than a league being played; skipped.`,
+        );
+      }
+      continue;
+    }
+
     const slots = rosterPositions(payload);
     const currentPeriod = payload.status?.currentMatchupPeriod ?? 1;
     const weeks =
@@ -561,6 +585,12 @@ export async function syncEspnLeaguesInner(
 }
 
 function describeLeagueFailure(leagueId: string, err: unknown): string {
+  // Discovery lists practice drafts, and ESPN deletes them shortly after they
+  // finish — so an id that resolved on one sync can be gone by the next. Say
+  // which of the two this is rather than reporting it as a plain failure.
+  if (err instanceof EspnApiError && err.status === 404) {
+    return `ESPN league ${leagueId} no longer exists — ${err.message} (practice drafts are deleted soon after they end).`;
+  }
   if (err instanceof EspnApiError && err.isAuthFailure) {
     return (
       `ESPN league ${leagueId} refused the request — cookies are missing, expired, ` +

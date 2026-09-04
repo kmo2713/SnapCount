@@ -269,6 +269,31 @@ export function waiverRules(settings: EspnLeagueSettings | null | undefined): {
 }
 
 /**
+ * True when ESPN made this league to practise in rather than to play in.
+ *
+ * A mock draft is a real league as far as the API is concerned: same shape,
+ * same teams, same team names, returned by the same account lookup — so
+ * discovery finds them, and a practice board would show up as one of your
+ * leagues. `leagueSubType` is where ESPN admits the difference, reporting
+ * CUSTOM_MOCK for a practice draft run off an existing league and NONE for the
+ * genuine article. Matched on substring because the draft lobby's own public
+ * mocks use other MOCK-suffixed values.
+ *
+ * These are short-lived too: the practice league one sync discovers is often
+ * already 404 "This League has been deleted." by the next, replaced by a fresh
+ * id for the next practice run. Filtering on the "Practice Draft for …" name
+ * would work today and break the first time ESPN reworded it, hence the
+ * settings field.
+ */
+export function isMockLeague(
+  settings: EspnLeagueSettings | null | undefined,
+): boolean {
+  return (settings?.draftSettings?.leagueSubType ?? "")
+    .toUpperCase()
+    .includes("MOCK");
+}
+
+/**
  * dynasty | keeper | redraft, from ESPN's draft settings.
  *
  * ESPN has no single "format" field, so this reads the keeper counts:

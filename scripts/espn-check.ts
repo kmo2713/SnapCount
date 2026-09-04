@@ -13,12 +13,14 @@ import "dotenv/config";
 
 import { EspnApiError, espn } from "../src/lib/platforms/espn/client";
 import { env, espnCredentials } from "../src/lib/env";
+import { isMockLeague } from "../src/lib/platforms/espn/normalize";
 
 interface LeagueProbe {
   id?: number;
   settings?: {
     name?: string;
     size?: number;
+    draftSettings?: { leagueSubType?: string };
     scoringSettings?: { scoringType?: string };
     rosterSettings?: { lineupSlotCounts?: Record<string, number> };
     acquisitionSettings?: { acquisitionBudget?: number; acquisitionType?: string };
@@ -75,6 +77,7 @@ async function main() {
   }
 
   let failures = 0;
+  let mocks = 0;
 
   for (const leagueId of leagueIds) {
     console.log(`\n--- league ${leagueId} ---`);
@@ -87,6 +90,16 @@ async function main() {
       );
 
       const s = league.settings;
+
+      // The sync drops practice drafts, so the pre-flight has to as well —
+      // otherwise it reports leagues that are never going to appear.
+      if (isMockLeague(s)) {
+        mocks++;
+        console.log(`  name        ${s?.name ?? "—"}`);
+        console.log("  SKIPPED     ESPN practice draft, not a league being played.");
+        continue;
+      }
+
       const budget = s?.acquisitionSettings?.acquisitionBudget;
       console.log(`  name        ${s?.name ?? "—"}`);
       console.log(`  size        ${s?.size ?? league.teams?.length ?? "—"} teams`);
@@ -123,7 +136,11 @@ async function main() {
     }
   }
 
-  console.log(`\n${leagueIds.length - failures}/${leagueIds.length} leagues readable.`);
+  const real = leagueIds.length - mocks;
+  console.log(`\n${real - failures}/${real} real league(s) readable.`);
+  if (mocks > 0) {
+    console.log(`${mocks} practice draft(s) skipped — the sync skips them too.`);
+  }
   if (failures > 0) process.exitCode = 1;
 }
 

@@ -12,3 +12,6 @@ next-env.d.ts
 .cache/
 tsconfig.tsbuildinfo
 .impeccable/
+
+# Transient per-run progress records written by the impact-dev plugin.
+.claude/impact-dev/
