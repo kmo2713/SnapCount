@@ -71,6 +71,14 @@ export function RootingBar({
         }}
       >
         <span className="sc-section-title">Where to look</span>
+        {rooting.length > 0 && (
+          <span
+            className="sc-mono"
+            style={{ fontSize: 10, color: "var(--sc-text-muted)" }}
+          >
+            {rooting.length} games — scroll for more
+          </span>
+        )}
         <span className="sc-note" style={{ margin: 0, fontSize: 11 }}>
           {mode === "leverage"
             ? "net wins swung, weighted by how much a point moves each league — a model, not a prediction"

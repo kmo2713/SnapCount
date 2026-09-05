@@ -39,21 +39,30 @@ const PREVIEW = 3;
 export function PreKickoff({ alerts }: { alerts: LineupAlert[] }) {
   const [expanded, setExpanded] = useState(false);
 
-  if (alerts.length === 0) return null;
-
   // Only the ones you can still do something about lead the panel.
   const actionable = alerts.filter((a) => a.gameState === "pre");
   const locked = alerts.filter((a) => a.gameState !== "pre");
   const shown = expanded ? actionable : actionable.slice(0, PREVIEW);
 
+  /*
+   * Gone entirely once nothing is actionable, which is what the header above
+   * promises and what the code used to only half do: it kept rendering a
+   * card, a "0 to check" counter and a note explaining there was nothing to
+   * check. The list shrinks on its own through the afternoon as each player's
+   * game kicks off and their alert moves from actionable to locked, so by the
+   * second window this is usually empty — and an empty warning at the top of a
+   * live scoreboard is just something in the way.
+   *
+   * The locked ones are not worth keeping either. Their value was telling you
+   * what to decide before lock; afterwards they are history, and the score is
+   * the thing you came back for.
+   */
+  if (actionable.length === 0) return null;
+
   return (
     <div
       className="sc-card"
-      style={{
-        padding: 10,
-        marginBottom: 10,
-        borderColor: actionable.length > 0 ? "var(--sc-orange)" : undefined,
-      }}
+      style={{ padding: 10, marginBottom: 10, borderColor: "var(--sc-orange)" }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
         <AlertTriangle size={14} color="var(--sc-orange)" />
@@ -66,35 +75,29 @@ export function PreKickoff({ alerts }: { alerts: LineupAlert[] }) {
         </span>
       </div>
 
-      {actionable.length === 0 ? (
-        <div className="sc-note" style={{ margin: 0 }}>
-          Nothing left to decide — every flagged starter has kicked off.
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {shown.map((alert) => (
-            <AlertRow key={alert.playerId} alert={alert} />
-          ))}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {shown.map((alert) => (
+          <AlertRow key={alert.playerId} alert={alert} />
+        ))}
 
-          {actionable.length > PREVIEW && (
-            <button
-              type="button"
-              className="sc-btn"
-              onClick={() => setExpanded((v) => !v)}
-              aria-expanded={expanded}
-              style={{
-                minHeight: 44,
-                justifyContent: "flex-start",
-                fontSize: 11,
-                color: "var(--sc-text-muted)",
-              }}
-            >
-              {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-              {expanded ? "Show fewer" : `${actionable.length - PREVIEW} more to check`}
-            </button>
-          )}
-        </div>
-      )}
+        {actionable.length > PREVIEW && (
+          <button
+            type="button"
+            className="sc-btn"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            style={{
+              minHeight: 44,
+              justifyContent: "flex-start",
+              fontSize: 11,
+              color: "var(--sc-text-muted)",
+            }}
+          >
+            {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            {expanded ? "Show fewer" : `${actionable.length - PREVIEW} more to check`}
+          </button>
+        )}
+      </div>
 
       {locked.length > 0 && (
         <details style={{ marginTop: 8 }}>

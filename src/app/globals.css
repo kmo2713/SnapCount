@@ -396,8 +396,25 @@ table.sc-table tbody tr:hover {
  * for. Three columns on a desktop — matchups, games, feed — collapsing to one
  * stacked column on a phone.
  */
+/*
+ * Game day is its own scroll container, and has to be.
+ *
+ * `body` is `overflow: hidden` app-wide — that is correct for the dashboard,
+ * where `.sc-content` scrolls inside a fixed shell. This route does not use
+ * that shell: it renders straight into `<body>`. With `min-height: 100vh` and
+ * no scroller of its own, everything below the first screen was simply
+ * unreachable — on a 900px laptop that is most of the page, with no scrollbar
+ * to suggest anything was missing.
+ *
+ * `dvh` with a `vh` fallback for the same reason `.sc-app` uses it: on mobile
+ * Safari `100vh` excludes the address bar, so the last card ends up underneath
+ * browser chrome.
+ */
 .sc-gameday {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--sc-bg);
   padding: 12px;
 }

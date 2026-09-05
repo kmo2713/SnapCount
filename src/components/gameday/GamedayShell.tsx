@@ -71,12 +71,28 @@ export function GamedayShell({ initialData }: { initialData: GamedayData }) {
     [data.matchups],
   );
 
+  /*
+   * A one-line read on the whole slate, for the wide empty band between the
+   * wordmark and the controls. On a laptop that was nine hundred pixels of
+   * nothing across the top of the page.
+   */
+  const summary = useMemo(() => {
+    const live = data.games.filter((g) => g.state === "in").length;
+    const starters = Object.values(data.presence.mine).reduce((n, v) => n + v, 0);
+    const next = data.games
+      .filter((g) => g.state === "pre")
+      .map((g) => g.kickoff)
+      .sort()[0];
+    return { live, starters, leagues: data.matchups.length, next };
+  }, [data]);
+
   const warnings = error ? [...data.warnings, error] : data.warnings;
 
   return (
     <div className="sc-gameday">
       <Header
         week={data.viewedWeek}
+        summary={summary}
         generatedAt={generatedAt}
         anyLive={data.anyLive}
         refreshing={refreshing}
@@ -185,12 +201,14 @@ export function GamedayShell({ initialData }: { initialData: GamedayData }) {
 
 function Header({
   week,
+  summary,
   generatedAt,
   anyLive,
   refreshing,
   onRefresh,
 }: {
   week: number;
+  summary: { live: number; starters: number; leagues: number; next?: string };
   generatedAt: string;
   anyLive: boolean;
   refreshing: boolean;
@@ -224,6 +242,49 @@ function Header({
       ) : (
         <Pill label="NO GAMES LIVE" color="var(--sc-text-muted)" />
       )}
+
+      {/* The band that used to be empty. */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          gap: 14,
+          fontSize: 11,
+          color: "var(--sc-text-muted)",
+          flexWrap: "wrap",
+        }}
+      >
+        <span>
+          <span className="sc-mono" style={{ color: "var(--sc-text)" }}>
+            {summary.leagues}
+          </span>{" "}
+          leagues
+        </span>
+        <span>
+          <span className="sc-mono" style={{ color: "var(--sc-text)" }}>
+            {summary.starters}
+          </span>{" "}
+          starters
+        </span>
+        {summary.live > 0 ? (
+          <span style={{ color: "var(--sc-red)" }}>
+            <span className="sc-mono">{summary.live}</span> in progress
+          </span>
+        ) : (
+          summary.next && (
+            <span>
+              next kickoff{" "}
+              <span className="sc-mono" style={{ color: "var(--sc-text)" }}>
+                {new Date(summary.next).toLocaleString(undefined, {
+                  weekday: "short",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </span>
+            </span>
+          )
+        )}
+      </div>
 
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
         <DataAge generatedAt={generatedAt} />

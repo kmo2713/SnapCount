@@ -32,6 +32,39 @@ export interface PresenceIndex {
   against: Map<string, number>;
 }
 
+/** Where a window sits in the running order. */
+function windowRank(list: NflGame[]): number {
+  if (list.some((g) => g.state === "in")) return 0;
+  if (list.some((g) => g.state === "pre")) return 1;
+  return 2;
+}
+
+/**
+ * Groups games into kickoff windows and orders them by what you are watching.
+ *
+ * Exported and pure so the Sunday behaviour can be tested today. Strict
+ * chronology put Wednesday and Thursday — one game each — above Sunday, each
+ * burning a whole row on a single card and pushing the eight-game noon window
+ * off a laptop screen. Live leads, then what has not kicked off, then finals
+ * newest-first.
+ */
+export function orderWindows(games: NflGame[]): Array<[string, NflGame[]]> {
+  const byKickoff = new Map<string, NflGame[]>();
+  for (const game of games) {
+    const list = byKickoff.get(game.kickoff) ?? [];
+    list.push(game);
+    byKickoff.set(game.kickoff, list);
+  }
+
+  return [...byKickoff.entries()].sort((a, b) => {
+    const byRank = windowRank(a[1]) - windowRank(b[1]);
+    if (byRank !== 0) return byRank;
+    // Within a rank the clock still orders it: the next window up reads before
+    // the one after it, and finished windows read newest-first.
+    return windowRank(a[1]) === 2 ? b[0].localeCompare(a[0]) : a[0].localeCompare(b[0]);
+  });
+}
+
 function GameWallInner({
   games,
   presence,
@@ -47,16 +80,14 @@ function GameWallInner({
    * Grouped by kickoff instant rather than by a hardcoded window list: the
    * schedule decides what the windows are, and a flex game or an international
    * kickoff would break any list we wrote down.
+   *
+   * Ordered by what you are watching, not by the clock. Strict chronology put
+   * Wednesday's single opener and Thursday's single game at the top, each
+   * burning a whole row on one card, which pushed Sunday's eight — the actual
+   * event — off a laptop screen. Live first, then what has not kicked off,
+   * then what is over.
    */
-  const windows = useMemo(() => {
-    const byKickoff = new Map<string, NflGame[]>();
-    for (const game of games) {
-      const list = byKickoff.get(game.kickoff) ?? [];
-      list.push(game);
-      byKickoff.set(game.kickoff, list);
-    }
-    return [...byKickoff.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [games]);
+  const windows = useMemo(() => orderWindows(games), [games]);
 
   if (games.length === 0) {
     return <div className="sc-note">No games scheduled for this week.</div>;
