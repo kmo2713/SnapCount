@@ -56,7 +56,7 @@ function LiveMatchupCard({ matchup: m }: { matchup: LiveMatchup }) {
         style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: 12 }}
       >
         <Avatar src={m.leagueAvatar} name={m.leagueName} size={18} rounded="square" />
-        <span className="sc-truncate" style={{ fontWeight: 600 }}>
+        <span className="sc-truncate" style={{ fontWeight: 600, minWidth: 0 }}>
           {m.leagueName}
         </span>
         <PlatformBadge platform={m.platform} compact />
@@ -202,7 +202,7 @@ function LiveMatchupCard({ matchup: m }: { matchup: LiveMatchup }) {
 
 function Side({ side, mine = false }: { side: LiveMatchupSide; mine?: boolean }) {
   return (
-    <div style={{ textAlign: mine ? "left" : "right" }}>
+    <div className={mine ? undefined : "sc-versus-side"} style={mine ? undefined : { textAlign: "right" }}>
       <div
         className="sc-truncate"
         style={{ fontSize: 11, color: mine ? "var(--sc-accent)" : "var(--sc-text)" }}

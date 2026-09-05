@@ -12,7 +12,8 @@
  * Collapses to nothing once every alert is locked, because a warning you can
  * no longer act on is just noise.
  */
-import { AlertTriangle, Clock } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Clock } from "lucide-react";
+import { useState } from "react";
 
 import { PosTag } from "@/components/ui/primitives";
 import type { LineupAlert } from "@/lib/domain/gameday";
@@ -25,12 +26,25 @@ function statusColor(status: string): string {
   return "var(--sc-red)";
 }
 
+/**
+ * How many alerts show before the rest fold away.
+ *
+ * Twelve questionable starters across nine leagues is an ordinary Sunday, and
+ * rendering all twelve pushed every score below the fold — on a page whose
+ * whole job is showing scores. The most urgent few are the ones you act on;
+ * the rest are a list you scan once and close.
+ */
+const PREVIEW = 3;
+
 export function PreKickoff({ alerts }: { alerts: LineupAlert[] }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (alerts.length === 0) return null;
 
   // Only the ones you can still do something about lead the panel.
   const actionable = alerts.filter((a) => a.gameState === "pre");
   const locked = alerts.filter((a) => a.gameState !== "pre");
+  const shown = expanded ? actionable : actionable.slice(0, PREVIEW);
 
   return (
     <div
@@ -58,9 +72,27 @@ export function PreKickoff({ alerts }: { alerts: LineupAlert[] }) {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {actionable.map((alert) => (
+          {shown.map((alert) => (
             <AlertRow key={alert.playerId} alert={alert} />
           ))}
+
+          {actionable.length > PREVIEW && (
+            <button
+              type="button"
+              className="sc-btn"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+              style={{
+                minHeight: 44,
+                justifyContent: "flex-start",
+                fontSize: 11,
+                color: "var(--sc-text-muted)",
+              }}
+            >
+              {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+              {expanded ? "Show fewer" : `${actionable.length - PREVIEW} more to check`}
+            </button>
+          )}
         </div>
       )}
 
@@ -94,7 +126,7 @@ function AlertRow({ alert, locked = false }: { alert: LineupAlert; locked?: bool
       }}
     >
       <PosTag pos={alert.position} />
-      <span className="sc-truncate" style={{ fontWeight: 600 }}>
+      <span className="sc-truncate" style={{ fontWeight: 600, minWidth: 0 }}>
         {alert.name}
       </span>
       <span style={{ color: "var(--sc-text-muted)" }}>{alert.nflTeam}</span>
@@ -109,7 +141,12 @@ function AlertRow({ alert, locked = false }: { alert: LineupAlert; locked?: bool
       */}
       <span
         className="sc-truncate"
-        style={{ marginLeft: "auto", color: "var(--sc-text-muted)", textAlign: "right" }}
+        style={{
+          marginLeft: "auto",
+          minWidth: 0,
+          color: "var(--sc-text-muted)",
+          textAlign: "right",
+        }}
         title={alert.leagues.map((l) => l.leagueName).join(", ")}
       >
         starting in {alert.leagues.length}

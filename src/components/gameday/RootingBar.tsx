@@ -73,7 +73,7 @@ export function RootingBar({
         <span className="sc-section-title">Where to look</span>
         <span className="sc-note" style={{ margin: 0, fontSize: 11 }}>
           {mode === "leverage"
-            ? "weighted by how much a point moves each league — a model, not a prediction"
+            ? "net wins swung, weighted by how much a point moves each league — a model, not a prediction"
             : "raw projected point swing, unweighted"}
         </span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
@@ -148,10 +148,20 @@ function RootingTile({
    */
   const emphasised = interest.strength > 0.6;
 
+  /*
+   * Leverage is a sum of win-probability shifts across every league, so it is
+   * not a percentage and routinely exceeds 1. Rendering it as one produced
+   * "-103.5 win %", which is impossible on its face and quietly wrong about
+   * what the number means.
+   *
+   * Expressed in whole wins instead: 1.00 is one entire league win flipped, so
+   * "-1.04 wins" says this game is worth about one win against you spread
+   * across the leagues it touches. Same number, a unit that can be read.
+   */
   const value =
     mode === "raw"
       ? `${interest.net > 0 ? "+" : ""}${fmt(interest.net, 0)}`
-      : `${interest.net > 0 ? "+" : ""}${fmt(interest.net * 100, 1)}`;
+      : `${interest.net > 0 ? "+" : ""}${fmt(interest.net, 2)}`;
 
   const leagues = interest.contributions.length;
 
@@ -195,7 +205,7 @@ function RootingTile({
       </div>
 
       <div style={{ fontSize: 10, color: "var(--sc-text-muted)" }}>
-        {mode === "raw" ? "proj pts" : "win %"} · {leagues} {leagues === 1 ? "league" : "leagues"}
+        {mode === "raw" ? "proj pts" : "wins"} · {leagues} {leagues === 1 ? "league" : "leagues"}
       </div>
 
       {/*

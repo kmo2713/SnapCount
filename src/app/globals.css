@@ -430,9 +430,24 @@ table.sc-table tbody tr:hover {
 
 .sc-gameday-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 380px) 1fr;
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
   gap: 12px;
   align-items: start;
+}
+
+/*
+ * The reason for `minmax(0, 1fr)` above and this rule below.
+ *
+ * A grid item defaults to `min-width: auto`, which means it refuses to shrink
+ * below its own min-content width. One long team name or a wide row therefore
+ * does not wrap or truncate — it widens the column, which widens the document
+ * past the viewport, and the whole page gains a horizontal scroll with the
+ * right edge of every card cut off. On a phone it made the page look broken
+ * while every class and media query was correct.
+ */
+.sc-gameday-grid > *,
+.sc-gameday-games > * {
+  min-width: 0;
 }
 
 /** The game wall: as many cards per row as fit, no breakpoint needed. */
@@ -589,6 +604,34 @@ table.sc-table tbody tr:hover {
     width: 100%;
     position: static;
   }
+
+  /*
+   * Game day, in one column — matchups above games, the order you care about
+   * them in on a phone.
+   *
+   * These belong in THIS block, not the 400px one below. They were written
+   * into that narrower block by mistake, which meant a 414px phone — the most
+   * common width there is — kept the desktop two-column grid and clipped half
+   * the page off the right edge. Nothing caught it: the classes were present,
+   * the build was clean, and 62 tests passed. It took looking at a screenshot.
+   */
+  .sc-gameday-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-gameday {
+    padding: 8px;
+  }
+
+  /*
+   * Both sides of a matchup read left-aligned once they stack. The away side
+   * is right-aligned beside its opponent and has nothing to sit against when
+   * it drops below, so the alignment has to move with the layout — which is
+   * exactly why it is a class and not an inline style.
+   */
+  .sc-versus-side {
+    text-align: left !important;
+  }
 }
 
 @media (max-width: 400px) {
@@ -602,14 +645,6 @@ table.sc-table tbody tr:hover {
     padding-right: 10px;
   }
 
-  /* One column, matchups above games — the order you care about them in. */
-  .sc-gameday-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sc-gameday {
-    padding: 8px;
-  }
 }
 
 /**
