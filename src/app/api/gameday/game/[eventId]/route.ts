@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { loadGameDetail } from "@/lib/data/gameday-detail";
 import { hasDatabase } from "@/lib/env";
+import { callerKey, rateLimit } from "@/lib/rate-limit";
 
 /*
  * Same reasoning as the poll endpoint: never the data cache for live data,
@@ -19,9 +20,23 @@ export const dynamic = "force-dynamic";
  * loads when you open a game and not before.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ eventId: string }> },
 ) {
+  /*
+   * Tighter than the poll, because a miss here is ~1.4MB of upstream fetch
+   * (595KB summary + 826KB plays) and the id is enumerable, so the memo never
+   * sees a second hit on a hostile pattern. Opening every game on a slate and
+   * re-opening them is nowhere near this.
+   */
+  const limit = rateLimit(callerKey(request, "gameday-detail"), 120, 60 * 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: `Slow down — try again in ${limit.retryAfter}s.` },
+      { status: 429, headers: { "retry-after": String(limit.retryAfter) } },
+    );
+  }
+
   const { eventId } = await params;
 
   /*

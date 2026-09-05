@@ -84,14 +84,19 @@ const MEMO_TTL_MS = 15_000;
 /**
  * How many (season, week) payloads are held at once.
  *
- * This started as a single slot, which was a hole: the key is built from query
- * parameters, so alternating `?week=1` and `?week=2` evicted the other entry
- * every time and produced a 0% hit rate — one full fan-out per request, which
- * is precisely what the memo exists to prevent. A handful of slots makes that
- * thrash impossible while still bounding memory, and the week is the only axis
- * anyone legitimately varies.
+ * Sized to the whole key space rather than to a guess at demand. The key comes
+ * from query parameters, so a caller round-robining `?week=` decides the access
+ * pattern, not us: with fewer slots than valid weeks, every request evicts an
+ * entry it is about to need and the hit rate collapses to zero — one full
+ * fan-out each, which is exactly what the memo exists to prevent. Four slots
+ * made that harder than one slot did, and no more than that.
+ *
+ * There are 18 regular-season weeks and the route rejects anything outside
+ * them, so holding all 18 makes the thrash arithmetically impossible. At ~57KB
+ * a payload that is about 1MB in the worst case, against an unbounded upstream
+ * fan-out — a trade worth making twice over.
  */
-const MEMO_MAX_KEYS = 4;
+const MEMO_MAX_KEYS = 18;
 
 /** How long the NFL state is reused. It changes weekly, not per request. */
 const STATE_TTL_MS = 5 * 60_000;

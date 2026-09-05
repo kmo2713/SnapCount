@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { loadGameday } from "@/lib/data/gameday";
 import { hasDatabase } from "@/lib/env";
+import { callerKey, rateLimit } from "@/lib/rate-limit";
 
 /*
  * `force-dynamic` matches every other route here, and is deliberate rather
@@ -28,14 +29,40 @@ export const dynamic = "force-dynamic";
  * A GET that writes would fire once per open tab rather than once per interval,
  * and no dedupe key can fix that.
  *
- * Unauthenticated, like the rest of this single-user app. Worth knowing what
- * that costs: one request fans out to about ten upstream calls, one of them to
- * ESPN's unauthenticated API, so anyone with the URL gets that amplification.
- * The memo bounds it — a warm instance performs at most one fan-out per 15s no
- * matter how hard it is polled. Nothing here is sensitive: public NFL scores
- * and the owner's own fantasy teams.
+ * Unauthenticated, like the rest of this single-user app. Nothing it serves is
+ * sensitive — public NFL scores and the owner's own fantasy teams — but one
+ * request fans out to about ten upstream calls, so the amplification is worth
+ * bounding even when the data is not worth protecting.
+ *
+ * The memo does part of that and was once claimed to do all of it. It does
+ * not: it collapses *identical* work, so it defends against many tabs asking
+ * the same question and not against one caller asking many different ones. The
+ * rate limit below is what actually bounds the second case.
  */
+/*
+ * A ceiling on the fan-out, because the memo cannot be one.
+ *
+ * The in-process memo collapses identical work, which protects against many
+ * tabs asking the same question. It cannot protect against one caller asking
+ * many different ones: the key includes the week, and a live scoreboard TTL
+ * has to be seconds, so enumerating weeks outruns the cache by construction.
+ * Measured — 54 round-robin requests across 18 weeks rebuilt every time even
+ * with a slot per week. Counting is the only thing that bounds this.
+ *
+ * Set well above a real session: a page polling every 25s uses ~144 an hour.
+ */
+const POLL_LIMIT = 400;
+const POLL_WINDOW_MS = 60 * 60_000;
+
 export async function GET(request: Request) {
+  const limit = rateLimit(callerKey(request, "gameday"), POLL_LIMIT, POLL_WINDOW_MS);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: `Slow down — try again in ${limit.retryAfter}s.` },
+      { status: 429, headers: { "retry-after": String(limit.retryAfter) } },
+    );
+  }
+
   if (!hasDatabase()) {
     return NextResponse.json(
       {

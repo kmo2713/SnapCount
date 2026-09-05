@@ -12,6 +12,7 @@ import { describeAnthropicError, hasAnthropicKey } from "@/lib/ai/client";
 import { loadDashboard } from "@/lib/data/dashboard";
 import { getDb, schema } from "@/lib/db/client";
 import { describeDbError } from "@/lib/db/errors";
+import { callerKey, rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 /** Adaptive thinking on a full roster can take a while. */
@@ -62,6 +63,23 @@ async function writeCache(row: typeof schema.aiAnalyses.$inferInsert) {
   }
 }
 
+/**
+ * How many analyses one caller can buy per hour.
+ *
+ * This endpoint spends real money: a miss is a `max_tokens: 16000` Opus call,
+ * and `refresh: true` deliberately skips the cache to force one. It is public
+ * and unauthenticated like everything else here, which is harmless for reading
+ * scores and is not harmless for a billed third-party key — a loop against the
+ * deployed URL had no ceiling at all.
+ *
+ * Authentication is not the answer: the browser calls this, and gating it on
+ * the sync secret would mean shipping that secret to the client. A ceiling is
+ * the answer. Twenty an hour is far above what one person clicking through
+ * lineups will ever use and far below anything that could hurt.
+ */
+const ANALYSIS_LIMIT = 20;
+const ANALYSIS_WINDOW_MS = 60 * 60_000;
+
 export async function POST(request: Request) {
   if (!hasAnthropicKey()) {
     return NextResponse.json(
@@ -71,6 +89,20 @@ export async function POST(request: Request) {
         configured: false,
       },
       { status: 503 },
+    );
+  }
+
+  const limit = rateLimit(
+    callerKey(request, "analysis"),
+    ANALYSIS_LIMIT,
+    ANALYSIS_WINDOW_MS,
+  );
+  if (!limit.allowed) {
+    return NextResponse.json(
+      {
+        error: `Too many analyses. Try again in ${limit.retryAfter}s — this endpoint spends real money, so it is capped.`,
+      },
+      { status: 429, headers: { "retry-after": String(limit.retryAfter) } },
     );
   }
 
