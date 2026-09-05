@@ -21,8 +21,10 @@ import { requireDb, schema } from "@/lib/db/client";
 import { env, espnCredentials } from "@/lib/env";
 import { EspnApiError, espn } from "@/lib/platforms/espn/client";
 import type { EspnLeagueResponse } from "@/lib/platforms/espn/league-types";
+import { BENCH_SLOTS } from "@/lib/platforms/espn/players";
 import {
   actualPoints,
+  espnPlayerKey,
   isMockLeague,
   isMyTeam,
   leagueStatus,
@@ -598,4 +600,105 @@ function describeLeagueFailure(leagueId: string, err: unknown): string {
     );
   }
   return `ESPN league ${leagueId} failed: ${err instanceof Error ? err.message : String(err)}`;
+}
+
+/* -------------------------------------------------------------------------
+   Live scoring
+   ------------------------------------------------------------------------- */
+
+/** One player's live points in an ESPN league, already mapped to our ids. */
+export interface EspnLivePlayerScore {
+  /** Canonical player id, resolved through `player_aliases`. */
+  playerId: string;
+  /** ESPN's own applied total. Never recomputed here. */
+  points: number;
+  isStarter: boolean;
+  /** Position within the starting lineup, or null on the bench. */
+  slotIndex: number | null;
+}
+
+/** One team's live position in an ESPN league. */
+export interface EspnLiveTeamScore {
+  espnTeamId: number;
+  points: number | null;
+  matchupId: string | null;
+  opponentEspnTeamId: number | null;
+  players: EspnLivePlayerScore[];
+}
+
+/**
+ * One ESPN league's live scores for a single week.
+ *
+ * Split out from the full sync above so the game-day path can read scores
+ * without paying for the rest of it: no settings, no members, no team upserts,
+ * no roster rewrite, and one request instead of one per week played so far.
+ * The full sync still owns rosters, because those need the league's declared
+ * starting slots and this deliberately does not fetch them.
+ *
+ * Points come straight from ESPN's `pointsByScoringPeriod` and each entry's
+ * applied stat total — never recomputed from raw stats. A number that
+ * disagrees with ESPN's own app, even slightly, makes the whole view suspect.
+ *
+ * Read-only: it touches no tables. The caller writes.
+ */
+export async function readEspnLiveWeek(
+  leagueId: string,
+  season: string,
+  week: number,
+  canonicalId: Map<string, string>,
+): Promise<{ teams: EspnLiveTeamScore[]; skippedPlayers: number }> {
+  const payload = await espn.getLeague<EspnLeagueResponse>(
+    leagueId,
+    season,
+    WEEK_VIEWS,
+    espnCredentials(),
+    week,
+  );
+
+  let skippedPlayers = 0;
+  const teamScores: EspnLiveTeamScore[] = [];
+
+  for (const pairing of pairingsFor(payload, week)) {
+    /*
+     * Starter order comes from sorting the non-bench entries by lineup slot,
+     * the same ordering `rosterFor` produces. It is derived rather than read
+     * because ESPN gives no explicit index — only the slot id, which is an
+     * enumeration and not a position.
+     */
+    const starters = pairing.entries
+      .filter((e) => !BENCH_SLOTS.has(e.lineupSlotId))
+      .sort((a, b) => a.lineupSlotId - b.lineupSlotId);
+    const starterIndex = new Map<string, number>();
+    starters.forEach((e, i) => starterIndex.set(espnPlayerKey(e), i));
+
+    const players: EspnLivePlayerScore[] = [];
+    for (const entry of pairing.entries) {
+      const key = espnPlayerKey(entry);
+      const playerId = canonicalId.get(key);
+      if (!playerId) {
+        // A player ESPN knows and we do not. Counted rather than thrown: one
+        // unmapped bench player must not cost the league its live scores.
+        skippedPlayers++;
+        continue;
+      }
+
+      const points = actualPoints(entry, week);
+      players.push({
+        playerId,
+        points: points ?? 0,
+        isStarter: starterIndex.has(key),
+        slotIndex: starterIndex.get(key) ?? null,
+      });
+    }
+
+    teamScores.push({
+      espnTeamId: pairing.teamId,
+      points: pairing.points,
+      matchupId: pairing.matchupId,
+      opponentEspnTeamId: pairing.opponentTeamId,
+      players,
+    });
+  }
+
+  return { teams: teamScores, skippedPlayers };
 }

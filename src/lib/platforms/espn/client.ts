@@ -141,14 +141,14 @@ export const espn = {
    */
   getPlayerUniverse: (season: string) =>
     fetchJson<EspnPlayer[]>(
-      `/seasons/${season}/players?scoringPeriodId=0&view=players_wl`,
+      `/seasons/${encodeURIComponent(season)}/players?scoringPeriodId=0&view=players_wl`,
       { filter: { players: { limit: PLAYER_FETCH_LIMIT } } },
     ),
 
   /** NFL teams as ESPN numbers them, with their bye weeks. */
   getProTeams: async (season: string): Promise<EspnProTeam[]> => {
     const res = await fetchJson<EspnSeasonResponse>(
-      `/seasons/${season}?view=proTeamSchedules_wl`,
+      `/seasons/${encodeURIComponent(season)}?view=proTeamSchedules_wl`,
     );
     return res.settings?.proTeams ?? [];
   },
@@ -209,7 +209,7 @@ export const espn = {
     const params = views.map((v) => `view=${encodeURIComponent(v)}`);
     if (scoringPeriodId != null) params.unshift(`scoringPeriodId=${scoringPeriodId}`);
     return fetchJson<T>(
-      `/seasons/${season}/segments/0/leagues/${leagueId}?${params.join("&")}`,
+      `/seasons/${encodeURIComponent(season)}/segments/0/leagues/${encodeURIComponent(leagueId)}?${params.join("&")}`,
       { credentials },
     );
   },

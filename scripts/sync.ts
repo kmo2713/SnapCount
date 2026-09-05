@@ -12,7 +12,7 @@
 import "dotenv/config";
 
 import { closeDb } from "../src/lib/db/client";
-import { syncAll, syncLiveScores, type SyncResult } from "../src/lib/data/sync";
+import { syncAll, syncAllLiveScores, type SyncResult } from "../src/lib/data/sync";
 import { hasDatabase } from "../src/lib/env";
 
 function flag(name: string): boolean {
@@ -43,7 +43,7 @@ async function main() {
   const started = Date.now();
 
   const results: SyncResult[] = live
-    ? [await syncLiveScores(value("season"), week)]
+    ? await syncAllLiveScores(value("season"), week)
     : await syncAll({
         includePlayers: flag("players"),
         includeSchedule: flag("schedule"),

@@ -166,9 +166,19 @@ export const sleeper = {
   getRosters: (leagueId: string) =>
     fetchJson<SleeperRoster[]>(`/league/${leagueId}/rosters`, { revalidate: 120 }),
 
-  getMatchups: (leagueId: string, week: number) =>
+  /**
+   * A league's matchups for a week, including `players_points`.
+   *
+   * The 120s default suits the dashboard, where a two-minute-old score is
+   * fine. Game day is not that: `revalidate: 0` there, because the caller
+   * collapses concurrent polls in-process instead, and Next's data cache is
+   * stale-while-revalidate — it would serve the *previous* score while
+   * refreshing behind it, which is precisely the wrong behaviour for a live
+   * scoreboard.
+   */
+  getMatchups: (leagueId: string, week: number, revalidate = 120) =>
     fetchJson<SleeperMatchup[]>(`/league/${leagueId}/matchups/${week}`, {
-      revalidate: 120,
+      revalidate,
     }),
 
   getDrafts: (leagueId: string) =>

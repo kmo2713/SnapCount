@@ -48,6 +48,13 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Test
+        # Vitest covers the pure domain math and the platform normalizers only,
+        # and stays hermetic by design: fixtures, no network, no database. The
+        # rooting model is the reason this step exists — a wrong win probability
+        # does not throw, it states a confident number that is false.
+        run: npm test
+
       - name: Build
         # A build reads env at module scope, so give it the shape of a real
         # environment without real values. Nothing is contacted: env.ts is

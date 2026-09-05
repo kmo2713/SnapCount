@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { syncAll, syncLiveScores, type SyncResult } from "@/lib/data/sync";
+import { syncAll, syncAllLiveScores, type SyncResult } from "@/lib/data/sync";
 import { env, hasDatabase } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -75,7 +75,7 @@ async function handle(request: Request): Promise<NextResponse> {
           { status: 400 },
         );
       }
-      results = [await syncLiveScores(undefined, week)];
+      results = await syncAllLiveScores(undefined, week);
     } else {
       // Opt in to the expensive jobs explicitly; both otherwise run only when
       // their tables are empty.

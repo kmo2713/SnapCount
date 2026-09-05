@@ -1,0 +1,187 @@
+{
+  "week": {
+    "number": 2
+  },
+  "events": [
+    {
+      "id": "401772936",
+      "date": "2025-09-12T00:15Z",
+      "shortName": "WSH @ GB",
+      "status": {
+        "displayClock": "0:00",
+        "period": 4,
+        "type": {
+          "state": "post",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "completed": true
+        }
+      },
+      "competitions": [
+        {
+          "broadcast": "Prime Video",
+          "competitors": [
+            {
+              "id": "9",
+              "homeAway": "home",
+              "score": "27",
+              "records": [
+                {
+                  "name": "overall",
+                  "abbreviation": "Game",
+                  "type": "total",
+                  "summary": "2-0"
+                }
+              ],
+              "team": {
+                "id": "9",
+                "abbreviation": "GB",
+                "displayName": "Green Bay Packers",
+                "shortDisplayName": "Packers"
+              }
+            },
+            {
+              "id": "28",
+              "homeAway": "away",
+              "score": "18",
+              "records": [
+                {
+                  "name": "overall",
+                  "abbreviation": "Game",
+                  "type": "total",
+                  "summary": "1-1"
+                }
+              ],
+              "team": {
+                "id": "28",
+                "abbreviation": "WSH",
+                "displayName": "Washington Commanders",
+                "shortDisplayName": "Commanders"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "401772725",
+      "date": "2025-09-14T17:00Z",
+      "shortName": "JAX @ CIN",
+      "status": {
+        "displayClock": "0:00",
+        "period": 4,
+        "type": {
+          "state": "post",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "completed": true
+        }
+      },
+      "competitions": [
+        {
+          "broadcast": "CBS",
+          "competitors": [
+            {
+              "id": "4",
+              "homeAway": "home",
+              "score": "31",
+              "records": [
+                {
+                  "name": "overall",
+                  "abbreviation": "Game",
+                  "type": "total",
+                  "summary": "2-0"
+                }
+              ],
+              "team": {
+                "id": "4",
+                "abbreviation": "CIN",
+                "displayName": "Cincinnati Bengals",
+                "shortDisplayName": "Bengals"
+              }
+            },
+            {
+              "id": "30",
+              "homeAway": "away",
+              "score": "27",
+              "records": [
+                {
+                  "name": "overall",
+                  "abbreviation": "Game",
+                  "type": "total",
+                  "summary": "1-1"
+                }
+              ],
+              "team": {
+                "id": "30",
+                "abbreviation": "JAX",
+                "displayName": "Jacksonville Jaguars",
+                "shortDisplayName": "Jaguars"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "401772834",
+      "date": "2025-09-14T17:00Z",
+      "shortName": "NYG @ DAL",
+      "status": {
+        "displayClock": "0:00",
+        "period": 5,
+        "type": {
+          "state": "post",
+          "detail": "Final/OT",
+          "shortDetail": "Final/OT",
+          "completed": true
+        }
+      },
+      "competitions": [
+        {
+          "broadcast": "FOX",
+          "competitors": [
+            {
+              "id": "6",
+              "homeAway": "home",
+              "score": "40",
+              "records": [
+                {
+                  "name": "overall",
+                  "abbreviation": "Game",
+                  "type": "total",
+                  "summary": "1-1"
+                }
+              ],
+              "team": {
+                "id": "6",
+                "abbreviation": "DAL",
+                "displayName": "Dallas Cowboys",
+                "shortDisplayName": "Cowboys"
+              }
+            },
+            {
+              "id": "19",
+              "homeAway": "away",
+              "score": "37",
+              "records": [
+                {
+                  "name": "overall",
+                  "abbreviation": "Game",
+                  "type": "total",
+                  "summary": "0-2"
+                }
+              ],
+              "team": {
+                "id": "19",
+                "abbreviation": "NYG",
+                "displayName": "New York Giants",
+                "shortDisplayName": "Giants"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

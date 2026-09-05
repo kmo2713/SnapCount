@@ -6,6 +6,7 @@
  * driven by real data.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import {
   Activity,
   AlertTriangle,
@@ -18,6 +19,7 @@ import {
   ListChecks,
   ListOrdered,
   Newspaper,
+  Radio,
   RefreshCw,
   Swords,
   Trophy,
@@ -154,6 +156,30 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {/*
+              The way into game day. Always present rather than only while a
+              game is live, because the pre-kickoff state is deliberately worth
+              opening — and a link that appears and disappears is a link nobody
+              learns where to find.
+            */}
+            <Link
+              href="/gameday"
+              className="sc-btn"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                minHeight: 34,
+                padding: "0 10px",
+                fontSize: 12,
+                color: "var(--sc-accent)",
+                borderColor: "var(--sc-accent-border)",
+              }}
+            >
+              <Radio size={13} />
+              Gameday
+            </Link>
+
             <div style={{ textAlign: "right" }}>
               <div
                 className="sc-mono"

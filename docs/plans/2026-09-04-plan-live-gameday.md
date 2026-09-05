@@ -1,6 +1,8 @@
 ---
 feature: Live Gameday experience
-status: planned
+status: implemented
+build-started: 2026-09-04
+completed: 2026-09-04
 date: 2026-09-04
 depth: deep
 builder: Product Owner + AI
@@ -281,22 +283,22 @@ mock-league `CUSTOM_MOCK` discriminator.
 
 ## Implementation Order
 
-- [ ] 1. Domain types — `src/lib/domain/gameday.ts`, mirroring the `DashboardData` envelope
-- [ ] 2. ESPN scoreboard client — `src/lib/platforms/nfl/scoreboard.ts`, all games in one call, reusing `normalizeEspnAbbr`
-- [ ] 3. Rooting math plus Vitest — `src/lib/domain/rooting.ts` as pure functions with hand-computed tests
-- [ ] 4. ESPN live scoring — **prerequisite**; extract the live-week reader and wire it into `syncLiveScores`
-- [ ] 5. Gameday orchestrator — `src/lib/data/gameday.ts`, fan-out plus roster join plus in-process memo
-- [ ] 6. Poll endpoint — `src/app/api/gameday/route.ts`, `force-dynamic`, pure read
-- [ ] 7. Poll hook plus full-bleed shell — `useGamedayPoll` and the `/gameday` route rendering live scores and rooting order — **SEP 9 REHEARSAL CHECKPOINT: units 1-7 must be watchable against the live opener**
-- [ ] 8. Matchup rail — nine races with win probability, points-to-come, yet-to-play, league-wide scores collapsed
-- [ ] 9. Rooting bar — leverage-weighted default with the raw-points toggle
-- [ ] 10. Game wall — game cards, status chips, possession, red-zone radar cross-referenced to rosters
-- [ ] 11. Snapshots — `gameday_snapshots` table, writer called from `scope=live`, cron cadence
-- [ ] 12. Game drill-in — box score with the user's players highlighted, drive chart, win-probability chart, play-by-play
-- [ ] 13. Cross-league play feed — athlete-ID join, per-league help/hurt annotation
-- [ ] 14. Guillotine watch — inverted survival math, its own component
-- [ ] 15. Pre-kickoff state plus TV windows — useful at 11:55, inactives and questionables across all 9 leagues
-- [ ] 16. Day timeline plus bench regret — Recharts timeline from snapshots, live optimal-lineup delta
+- [x] 1. Domain types — `src/lib/domain/gameday.ts`, mirroring the `DashboardData` envelope
+- [x] 2. ESPN scoreboard client — `src/lib/platforms/nfl/scoreboard.ts`, all games in one call, reusing `normalizeEspnAbbr` (pre-authorized)
+- [x] 3. Rooting math plus Vitest — `src/lib/domain/rooting.ts` as pure functions with hand-computed tests (pre-authorized)
+- [x] 4. ESPN live scoring — **prerequisite**; extract the live-week reader and wire it into `syncLiveScores` (pre-authorized)
+- [x] 5. Gameday orchestrator — `src/lib/data/gameday.ts`, fan-out plus roster join plus in-process memo (pre-authorized)
+- [x] 6. Poll endpoint — `src/app/api/gameday/route.ts`, `force-dynamic`, pure read (pre-authorized)
+- [x] 7. Poll hook plus full-bleed shell — `useGamedayPoll` and the `/gameday` route rendering live scores and rooting order — **SEP 9 REHEARSAL CHECKPOINT: units 1-7 must be watchable against the live opener**
+- [x] 8. Matchup rail — nine races with win probability, points-to-come, yet-to-play, league-wide scores collapsed
+- [x] 9. Rooting bar — leverage-weighted default with the raw-points toggle
+- [x] 10. Game wall — game cards, status chips, possession, red-zone radar cross-referenced to rosters
+- [x] 11. Snapshots — `gameday_snapshots` table, writer called from `scope=live`, cron cadence
+- [x] 12. Game drill-in — box score with the user's players highlighted, drive chart, win-probability chart, play-by-play
+- [x] 13. Cross-league play feed — athlete-ID join, per-league help/hurt annotation
+- [x] 14. Guillotine watch — inverted survival math, its own component
+- [x] 15. Pre-kickoff state plus TV windows — useful at 11:55, inactives and questionables across all 9 leagues
+- [x] 16. Day timeline plus bench regret — Recharts timeline from snapshots, live optimal-lineup delta
 
 ---
 
@@ -464,7 +466,10 @@ lies confidently, which is the specific failure this app's conventions exist to 
 - `remainingProjection` applies the position-average fallback for a starter with no
   projection row, and never silently contributes 0
 - `guillotineSurvival` returns ~0 for the field's lowest score with no games left, and rises
-  as the field's remaining projections rise
+  as **the user's own** remaining projection rises
+  *(corrected during unit 3: the original text said "as the field's remaining projections
+  rise", which is the wrong direction — a rival scoring more points cannot improve the
+  user's survival. The implemented test asserts monotonicity in the user's own remaining.)*
 - hand-computed expected values for one fully worked two-league scenario, so the test
   documents the model rather than merely re-running it
 

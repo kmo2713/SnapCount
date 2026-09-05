@@ -558,3 +558,43 @@ export const syncRuns = pgTable(
   },
   (t) => [index("sync_runs_started_idx").on(t.startedAt)],
 );
+
+/* -------------------------------------------------------------------------
+   Game day
+   ------------------------------------------------------------------------- */
+
+/**
+ * One sample of a Sunday, for the day timeline and the post-game recap.
+ *
+ * Append-only, so it follows the `syncRuns` shape rather than the shared
+ * `timestamps` spread: nothing here is ever updated in place.
+ *
+ * The whole day lands in one jsonb column per sample rather than a row per
+ * team. That is a deliberate trade: 104 teams sampled every thirty seconds
+ * across a six-hour Sunday is roughly 75,000 rows, against about 720 this way,
+ * for a chart that reads the whole sample at once anyway. It also keeps NFL
+ * game state alongside the fantasy scores, which is what lets the timeline
+ * explain its own spikes rather than just showing them.
+ *
+ * `bucket` is the sample time quantised to the writer's cadence, and it exists
+ * only to be the dedupe key: the writer is a cron that can fire twice or be
+ * retried, and a timeline with duplicate samples draws a lie. Writes are
+ * `onConflictDoNothing` against it.
+ */
+export const gamedaySnapshots = pgTable(
+  "gameday_snapshots",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    season: text().notNull(),
+    week: integer().notNull(),
+    /** Quantised sample time. The natural key, with season and week. */
+    bucket: timestamp({ withTimezone: true }).notNull(),
+    capturedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    /** Every league's scores plus NFL game state, as one compact object. */
+    payload: jsonb().notNull(),
+  },
+  (t) => [
+    uniqueIndex("gameday_snapshots_bucket_uq").on(t.season, t.week, t.bucket),
+    index("gameday_snapshots_captured_idx").on(t.capturedAt),
+  ],
+);

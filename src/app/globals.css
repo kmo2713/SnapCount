@@ -387,6 +387,61 @@ table.sc-table tbody tr:hover {
   top: 0;
 }
 
+/* -------------------------------------------------------------- gameday -- */
+
+/*
+ * Game day is its own full-bleed route rather than a tab in the dashboard
+ * shell: at noon on a Sunday the header, the thirteen-item rail and the
+ * content padding are all competing with the thing you actually opened the app
+ * for. Three columns on a desktop — matchups, games, feed — collapsing to one
+ * stacked column on a phone.
+ */
+.sc-gameday {
+  min-height: 100vh;
+  background: var(--sc-bg);
+  padding: 12px;
+}
+
+/*
+ * The rooting strip pins to the top, because the whole point of it is being
+ * readable while you scroll something else.
+ */
+.sc-gameday-rooting {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--sc-bg);
+  padding-bottom: 10px;
+}
+
+.sc-gameday-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  /* Fade the overflow edge rather than clipping it dead. */
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 24px), transparent 100%);
+}
+
+.sc-gameday-strip > * {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+}
+
+.sc-gameday-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+/** The game wall: as many cards per row as fit, no breakpoint needed. */
+.sc-gameday-games {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+
 /* --------------------------------------------------------------- mobile -- */
 
 /*
@@ -546,11 +601,47 @@ table.sc-table tbody tr:hover {
     padding-left: 10px;
     padding-right: 10px;
   }
+
+  /* One column, matchups above games — the order you care about them in. */
+  .sc-gameday-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-gameday {
+    padding: 8px;
+  }
+}
+
+/**
+ * A live game, breathing.
+ *
+ * Named and disabled to the same rules as `sc-spin`: the only other animation
+ * in this file. Used for the red-zone border, which is the one state on this
+ * page that genuinely wants to grab you.
+ */
+@keyframes sc-pulse {
+  0%,
+  100% {
+    border-color: var(--sc-red);
+  }
+  50% {
+    border-color: var(--sc-border);
+  }
+}
+
+.sc-pulse {
+  animation: sc-pulse 1.6s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .spin {
     animation: none;
+  }
+
+  .sc-pulse {
+    animation: none;
+    /* Still say "red zone" — just without the motion. */
+    border-color: var(--sc-red);
   }
 
   .sc-card.sc-hover:hover {

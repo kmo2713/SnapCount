@@ -9,7 +9,7 @@
 import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 
 import { requireDb, schema } from "@/lib/db/client";
-import { env } from "@/lib/env";
+import { env, espnCredentials } from "@/lib/env";
 import { espn } from "@/lib/platforms/espn/client";
 import {
   buildEspnCrosswalk,
@@ -17,7 +17,13 @@ import {
   type CanonicalPlayer,
 } from "@/lib/platforms/espn/players";
 import { fetchByeWeeks } from "@/lib/platforms/nfl/schedule";
-import { syncEspnLeaguesInner, type SyncEspnOptions } from "./sync-espn";
+import { loadGameday } from "./gameday";
+import { writeSnapshot } from "./gameday-snapshot";
+import {
+  readEspnLiveWeek,
+  syncEspnLeaguesInner,
+  type SyncEspnOptions,
+} from "./sync-espn";
 import { sleeper } from "@/lib/platforms/sleeper/client";
 import {
   fetchLeagueBundle,
@@ -609,6 +615,290 @@ export async function syncLiveScores(
             points: pts,
             isStarter: starterIndex.has(pid),
             slotIndex: starterIndex.get(pid) ?? null,
+          });
+        }
+      }
+
+      for (const batch of chunk(playerRows)) {
+        await db
+          .insert(matchupPlayers)
+          .values(batch)
+          .onConflictDoUpdate({
+            target: [matchupPlayers.matchupId, matchupPlayers.playerId],
+            set: {
+              points: sql`excluded.points`,
+              isStarter: sql`excluded.is_starter`,
+              slotIndex: sql`excluded.slot_index`,
+            },
+          });
+      }
+      stats.playerScores += playerRows.length;
+    }
+
+    return { stats, warnings };
+  });
+}
+
+/**
+ * Every platform's live scores for one week.
+ *
+ * The Sleeper half is allowed to fail the job; the ESPN half is not, for the
+ * same reason `syncAll` treats it that way — it is undocumented and read with
+ * cookies that expire, and seven healthy leagues must not be held hostage to
+ * two. Returns one result per platform so `sync_runs` and the API response
+ * both show which half did what.
+ */
+export async function syncAllLiveScores(
+  season?: string,
+  week?: number,
+): Promise<SyncResult[]> {
+  const results = [await syncLiveScores(season, week)];
+
+  try {
+    results.push(await syncEspnLiveScores(season, week));
+  } catch (err) {
+    results.push({
+      scope: "live",
+      stats: {},
+      warnings: [
+        `ESPN live scores failed: ${err instanceof Error ? err.message : String(err)}`,
+      ],
+      durationMs: 0,
+    });
+  }
+
+  /*
+   * Record the moment, last, so the sample reflects the scores just written.
+   *
+   * This is the day timeline's only writer, and it lives here rather than in
+   * the game-day route on purpose: a cron fires on a fixed cadence whether or
+   * not a browser is open, which is the only way the timeline's x-axis means
+   * "the day" instead of "when someone happened to be looking". A GET that
+   * wrote would sample once per open tab and could never be backfilled.
+   *
+   * Never allowed to fail the scores it follows — the sync's job is the cache,
+   * and the timeline is a bonus on top of it.
+   */
+  try {
+    results.push(await snapshotGameday(season, week));
+  } catch (err) {
+    results.push({
+      scope: "snapshot",
+      stats: {},
+      warnings: [
+        `Game-day snapshot failed: ${err instanceof Error ? err.message : String(err)}`,
+      ],
+      durationMs: 0,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Records one sample of the day for the timeline.
+ *
+ * Reads through `loadGameday`, so the sample is exactly what the page would
+ * have shown at that moment — including the live scores this job just wrote.
+ * `force` skips the in-process memo: a cron that fires inside the memo window
+ * would otherwise record a moment slightly older than the one it just synced.
+ */
+export async function snapshotGameday(
+  season?: string,
+  week?: number,
+): Promise<SyncResult> {
+  return recorded("snapshot", null, async () => {
+    const data = await loadGameday({ season, week, force: true });
+    const { written, bucket } = await writeSnapshot(data);
+
+    return {
+      stats: {
+        written: written ? 1 : 0,
+        leagues: data.matchups.length,
+        games: data.games.length,
+      },
+      warnings: written
+        ? []
+        : [`A snapshot already exists for the ${bucket.toISOString()} bucket; skipped.`],
+    };
+  });
+}
+
+/**
+ * ESPN live scores for one week.
+ *
+ * Recorded as its own scope rather than folded into `syncLiveScores`, for two
+ * reasons. A `sync_runs` row carries a platform, so merging them would file
+ * ESPN's failures under Sleeper. And an ESPN problem must never fail a sync
+ * whose Sleeper half is healthy — the rule `syncAll` already applies, which
+ * matters more here than anywhere: ESPN is undocumented, read with borrowed
+ * cookies that expire, and two of the nine leagues depend on it.
+ *
+ * Without this, game day showed seven leagues ticking and two frozen at
+ * whatever the last full sync happened to write.
+ */
+export async function syncEspnLiveScores(
+  season?: string,
+  week?: number,
+): Promise<SyncResult> {
+  return recorded("live", "espn", async () => {
+    const db = requireDb();
+    const warnings: string[] = [];
+    const stats = { leagues: 0, matchups: 0, playerScores: 0, skippedPlayers: 0 };
+
+    if (!espnCredentials()) {
+      return { stats, warnings: ["No ESPN cookies configured; nothing to score."] };
+    }
+
+    const state = await sleeper.getState();
+    const resolvedSeason =
+      season ?? env.season ?? state?.league_season ?? state?.season ?? "";
+    const resolvedWeek = week ?? (state ? resolveViewedWeek(state) : 1);
+
+    const leagueRows = await db
+      .select({
+        id: leagues.id,
+        platformLeagueId: leagues.platformLeagueId,
+        name: leagues.name,
+        status: leagues.status,
+      })
+      .from(leagues)
+      .where(and(eq(leagues.season, resolvedSeason), eq(leagues.platform, "espn")));
+
+    // A league that has not drafted has no scores to move, and the full sync
+    // deliberately stores no rosters for one.
+    const active = leagueRows.filter(
+      (l) => l.status !== "pre_draft" && l.status !== "drafting",
+    );
+
+    if (active.length === 0) {
+      return {
+        stats,
+        warnings: [
+          leagueRows.length === 0
+            ? `No ESPN leagues cached for ${resolvedSeason}; run a full sync first.`
+            : `All ${leagueRows.length} ESPN league(s) are still pre-draft; no scores yet.`,
+        ],
+      };
+    }
+
+    const teamRows = await db
+      .select({
+        id: teams.id,
+        leagueId: teams.leagueId,
+        platformTeamId: teams.platformTeamId,
+      })
+      .from(teams)
+      .where(inArray(teams.leagueId, active.map((l) => l.id)));
+
+    /** leagueId -> (ESPN team id -> our team uuid) */
+    const teamIdsByLeague = new Map<string, Map<number, string>>();
+    for (const t of teamRows) {
+      const map = teamIdsByLeague.get(t.leagueId) ?? new Map<number, string>();
+      map.set(Number(t.platformTeamId), t.id);
+      teamIdsByLeague.set(t.leagueId, map);
+    }
+
+    const aliasRows = await db
+      .select({
+        platformPlayerId: playerAliases.platformPlayerId,
+        playerId: playerAliases.playerId,
+      })
+      .from(playerAliases)
+      .where(eq(playerAliases.platform, "espn"));
+    const canonicalId = new Map(
+      aliasRows.map((r) => [r.platformPlayerId, r.playerId]),
+    );
+
+    if (canonicalId.size === 0) {
+      return {
+        stats,
+        warnings: [
+          "No ESPN player crosswalk yet — run `npm run sync -- --espn-ids` first.",
+        ],
+      };
+    }
+
+    /*
+     * Sequential, not fanned out. Two leagues at ~1s each is not worth risking
+     * a rate limit on an undocumented endpoint read with cookies that are not
+     * ours to spend.
+     */
+    for (const league of active) {
+      let live: Awaited<ReturnType<typeof readEspnLiveWeek>>;
+      try {
+        live = await readEspnLiveWeek(
+          league.platformLeagueId,
+          resolvedSeason,
+          resolvedWeek,
+          canonicalId,
+        );
+      } catch (err) {
+        warnings.push(
+          `Live scores for "${league.name}" failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        continue;
+      }
+
+      stats.skippedPlayers += live.skippedPlayers;
+      const teamIdByEspnId = teamIdsByLeague.get(league.id);
+      if (!teamIdByEspnId || live.teams.length === 0) continue;
+
+      const rows = live.teams
+        .map((t) => {
+          const teamId = teamIdByEspnId.get(t.espnTeamId);
+          if (!teamId) return null;
+          return {
+            leagueId: league.id,
+            season: resolvedSeason,
+            week: resolvedWeek,
+            platformMatchupId: t.matchupId,
+            teamId,
+            opponentTeamId:
+              t.opponentEspnTeamId != null
+                ? (teamIdByEspnId.get(t.opponentEspnTeamId) ?? null)
+                : null,
+            points: num(t.points),
+            updatedAt: new Date(),
+          };
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null);
+
+      if (rows.length === 0) continue;
+
+      const inserted = await db
+        .insert(matchups)
+        .values(rows)
+        .onConflictDoUpdate({
+          target: [matchups.leagueId, matchups.week, matchups.teamId],
+          set: {
+            platformMatchupId: sql`excluded.platform_matchup_id`,
+            opponentTeamId: sql`excluded.opponent_team_id`,
+            points: sql`excluded.points`,
+            updatedAt: sql`now()`,
+          },
+        })
+        .returning({ id: matchups.id, teamId: matchups.teamId });
+
+      stats.leagues++;
+      stats.matchups += inserted.length;
+
+      const matchupIdByTeam = new Map(inserted.map((m) => [m.teamId, m.id]));
+
+      const playerRows = [];
+      for (const t of live.teams) {
+        const teamId = teamIdByEspnId.get(t.espnTeamId);
+        if (!teamId) continue;
+        const matchupId = matchupIdByTeam.get(teamId);
+        if (!matchupId) continue;
+
+        for (const p of t.players) {
+          playerRows.push({
+            matchupId,
+            playerId: p.playerId,
+            points: p.points,
+            isStarter: p.isStarter,
+            slotIndex: p.slotIndex,
           });
         }
       }
