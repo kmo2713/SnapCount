@@ -10,14 +10,16 @@
  * afternoon from being down twelve with nobody left, and a scoreboard that
  * shows only the first number cannot tell you which one you are having.
  *
- * The rest of the league collapses underneath. It is folded away by default
- * because your own matchup is what you opened the app for, but it is one tap
- * away because in a Guillotine league everyone else's score IS your matchup.
+ * The rest of the league opens in a dialog, one tap away — in a Guillotine
+ * league everyone else's score IS your matchup. It is not on the card because
+ * a five-column table inside a 380px column truncated every team name and, in
+ * a league of 32, buried the next eight matchups a screen and a half down.
  */
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ListOrdered } from "lucide-react";
 import { memo, useState } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
+import { Modal } from "@/components/ui/Modal";
 import { FormatBadge, PlatformBadge, fmt } from "@/components/ui/primitives";
 import type { LiveMatchup, LiveMatchupSide } from "@/lib/domain/gameday";
 
@@ -133,8 +135,7 @@ function LiveMatchupCard({ matchup: m }: { matchup: LiveMatchup }) {
       <button
         type="button"
         className="sc-btn"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
+        onClick={() => setOpen(true)}
         style={{
           marginTop: 8,
           width: "100%",
@@ -147,55 +148,65 @@ function LiveMatchupCard({ matchup: m }: { matchup: LiveMatchup }) {
           color: "var(--sc-text-muted)",
         }}
       >
-        {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-        {open ? "Hide" : "Show"} all {m.totalTeams} teams
+        <ListOrdered size={13} />
+        All {m.totalTeams} teams
       </button>
 
-      {open && (
-        <div style={{ marginTop: 6 }}>
-          <table className="sc-table" style={{ fontSize: 11 }}>
-            <thead>
-              <tr>
-                <th style={{ width: 26 }}>#</th>
-                <th>Team</th>
-                <th style={{ textAlign: "right" }}>Score</th>
-                <th style={{ textAlign: "right" }}>Proj left</th>
-                <th style={{ textAlign: "right" }}>To play</th>
-              </tr>
-            </thead>
-            <tbody>
-              {m.standings.map((row, i) => (
-                <tr
-                  key={row.teamId}
-                  style={{
-                    background: row.isMine ? "var(--sc-accent-soft)" : undefined,
-                  }}
+      {/*
+        In a dialog rather than expanded in place. A five-column table inside a
+        380px column truncated every team name and still overflowed, and in a
+        league of 32 it pushed the next eight matchups a screen and a half down
+        the page. Given its own surface the columns fit and the overview stays
+        an overview.
+      */}
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={m.leagueName}
+        subtitle={`Week ${m.week} · all ${m.totalTeams} teams, highest score first`}
+      >
+        <table className="sc-table">
+          <thead>
+            <tr>
+              <th style={{ width: 34 }}>#</th>
+              <th>Team</th>
+              <th style={{ textAlign: "right" }}>Score</th>
+              <th style={{ textAlign: "right" }}>Proj left</th>
+              <th style={{ textAlign: "right" }}>To play</th>
+            </tr>
+          </thead>
+          <tbody>
+            {m.standings.map((row, i) => (
+              <tr
+                key={row.teamId}
+                style={{ background: row.isMine ? "var(--sc-accent-soft)" : undefined }}
+              >
+                <td className="sc-mono" style={{ color: "var(--sc-text-muted)" }}>
+                  {i + 1}
+                </td>
+                <td style={{ color: row.isMine ? "var(--sc-accent)" : undefined }}>
+                  {row.teamName}
+                </td>
+                <td className="sc-mono" style={{ textAlign: "right", fontWeight: 700 }}>
+                  {fmt(row.score)}
+                </td>
+                <td
+                  className="sc-mono"
+                  style={{ textAlign: "right", color: "var(--sc-cyan)" }}
                 >
-                  <td className="sc-mono">{i + 1}</td>
-                  <td
-                    className="sc-truncate"
-                    style={{ color: row.isMine ? "var(--sc-accent)" : undefined }}
-                  >
-                    {row.teamName}
-                  </td>
-                  <td className="sc-mono" style={{ textAlign: "right", fontWeight: 700 }}>
-                    {fmt(row.score)}
-                  </td>
-                  <td
-                    className="sc-mono"
-                    style={{ textAlign: "right", color: "var(--sc-cyan)" }}
-                  >
-                    {fmt(row.remaining, 0)}
-                  </td>
-                  <td className="sc-mono" style={{ textAlign: "right" }}>
-                    {row.yetToPlay}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                  +{fmt(row.remaining, 0)}
+                </td>
+                <td
+                  className="sc-mono"
+                  style={{ textAlign: "right", color: "var(--sc-text-muted)" }}
+                >
+                  {row.yetToPlay}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Modal>
     </div>
   );
 }

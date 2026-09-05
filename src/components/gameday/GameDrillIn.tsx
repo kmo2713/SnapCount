@@ -12,7 +12,7 @@
  * Loaded on open, never with the poll. This payload is ~595KB for one game
  * against ~135KB for the whole slate.
  */
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   CartesianGrid,
@@ -24,16 +24,10 @@ import {
   YAxis,
 } from "recharts";
 
-import { Loading, Pill } from "@/components/ui/primitives";
+import { Loading } from "@/components/ui/primitives";
 import type { GameDetail } from "@/lib/domain/gameday";
 
-export function GameDrillIn({
-  eventId,
-  onClose,
-}: {
-  eventId: string;
-  onClose: () => void;
-}) {
+export function GameDrillIn({ eventId }: { eventId: string }) {
   const [detail, setDetail] = useState<GameDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   /**
@@ -83,39 +77,35 @@ export function GameDrillIn({
   const shownPlays = allPlays ? (detail?.plays ?? []) : keyPlays;
 
   return (
-    <div className="sc-card" id="gameday-drill-in" style={{ padding: 12, marginBottom: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <span style={{ fontWeight: 700, fontSize: 14 }}>
-          {detail ? detail.shortName : "Loading game"}
-        </span>
-        {detail && (
-          <>
-            <span className="sc-mono" style={{ fontSize: 12 }}>
-              {detail.away.abbr} {detail.away.score ?? "—"} @ {detail.home.abbr}{" "}
-              {detail.home.score ?? "—"}
-            </span>
-            <span style={{ fontSize: 11, color: "var(--sc-text-muted)" }}>
-              {detail.statusDetail}
-            </span>
-            {detail.state === "in" && <Pill label="LIVE" color="var(--sc-red)" />}
-          </>
-        )}
-        <button
-          type="button"
-          className="sc-btn"
-          onClick={onClose}
-          aria-label="Close game detail"
+    <div>
+      {/*
+        The scoreline stays in the body rather than the dialog title: the title
+        is rendered before the fetch resolves, and a header that pops a score
+        in a beat later reads as a glitch.
+      */}
+      {detail && (
+        <div
+          className="sc-mono"
           style={{
-            marginLeft: "auto",
-            minHeight: 44,
-            minWidth: 44,
-            display: "grid",
-            placeItems: "center",
+            display: "flex",
+            alignItems: "baseline",
+            gap: 12,
+            fontSize: 22,
+            fontWeight: 700,
+            marginBottom: 12,
           }}
         >
-          <X size={14} />
-        </button>
-      </div>
+          <span>
+            {detail.away.abbr}{" "}
+            <span style={{ color: "var(--sc-text-muted)" }}>{detail.away.score ?? "—"}</span>
+          </span>
+          <span style={{ color: "var(--sc-text-muted)", fontSize: 12 }}>at</span>
+          <span>
+            {detail.home.abbr}{" "}
+            <span style={{ color: "var(--sc-text-muted)" }}>{detail.home.score ?? "—"}</span>
+          </span>
+        </div>
+      )}
 
       {error && (
         <div

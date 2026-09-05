@@ -416,19 +416,40 @@ table.sc-table tbody tr:hover {
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--sc-bg);
-  padding: 12px;
+  /*
+   * No padding here. This element is the scrollport, and `position: sticky`
+   * pins to the scrollport rather than to the padding box — so padding on the
+   * scroller leaves a band above and beside anything sticky that scrolling
+   * content passes straight through. The padding lives on the two children
+   * instead.
+   */
+  padding: 0;
 }
 
 /*
- * The rooting strip pins to the top, because the whole point of it is being
- * readable while you scroll something else.
+ * Everything that stays put: the wordmark, the controls, and the rooting bar.
+ *
+ * One band rather than two sticky elements, because two would leave a seam
+ * between them for content to show through. It is opaque and full-bleed for
+ * the same reason — anything translucent or inset turns scrolled content into
+ * a flicker behind the thing you are trying to read.
  */
-.sc-gameday-rooting {
+.sc-gameday-chrome {
   position: sticky;
   top: 0;
-  z-index: 5;
+  z-index: 20;
   background: var(--sc-bg);
-  padding-bottom: 10px;
+  border-bottom: 1px solid var(--sc-border);
+  padding: 12px 12px 10px;
+}
+
+/* The scrolling half. */
+.sc-gameday-body {
+  padding: 12px;
+}
+
+.sc-gameday-rooting {
+  margin-top: 10px;
 }
 
 .sc-gameday-strip {
@@ -472,6 +493,64 @@ table.sc-table tbody tr:hover {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 10px;
+}
+
+/* --------------------------------------------------------------- modal -- */
+
+/*
+ * Drill-in detail gets its own surface. A league's full standings or a game's
+ * box score cannot be read inside a 380px column, and growing the page with
+ * accordions costs the overview the page exists to give.
+ *
+ * Styling the native `<dialog>` means overriding its UA defaults: it ships with
+ * a border, a white background, `width: fit-content` and auto margins.
+ */
+.sc-modal {
+  border: none;
+  padding: 0;
+  background: transparent;
+  max-width: min(680px, calc(100vw - 24px));
+  width: 100%;
+  max-height: calc(100dvh - 48px);
+  color: var(--sc-text);
+}
+
+.sc-modal-wide {
+  max-width: min(1040px, calc(100vw - 24px));
+}
+
+.sc-modal::backdrop {
+  background: rgba(8, 11, 14, 0.72);
+  /* Enough to separate the panel from a busy scoreboard, not so much that the
+     page behind stops being legible as context. */
+  backdrop-filter: blur(2px);
+}
+
+.sc-modal-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 48px);
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+  overflow: hidden;
+}
+
+.sc-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--sc-border);
+  /* Sticky within the panel so the title survives a long box score. */
+  background: var(--sc-surface);
+  flex-shrink: 0;
+}
+
+.sc-modal-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px;
 }
 
 /* --------------------------------------------------------------- mobile -- */
@@ -648,6 +727,17 @@ table.sc-table tbody tr:hover {
    */
   .sc-versus-side {
     text-align: left !important;
+  }
+
+  /*
+   * The model caveat is the first thing to go on a phone. It sits inside the
+   * sticky band, where it wrapped to two lines and took a third of the
+   * viewport permanently — and the toggle beside it, plus the "wins" unit on
+   * every tile, already say the number is modelled. It stays on wider screens
+   * where the space is free.
+   */
+  .sc-gameday-caveat {
+    display: none;
   }
 }
 

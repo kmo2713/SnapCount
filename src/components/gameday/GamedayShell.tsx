@@ -11,7 +11,7 @@
  * the header, the thirteen-item rail and the content padding are all competing
  * with the thing you actually opened the app for.
  */
-import { RefreshCw, Swords } from "lucide-react";
+import { LineChart as LineChartIcon, RefreshCw, Swords } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -22,6 +22,7 @@ import { GameWall } from "@/components/gameday/GameWall";
 import { MatchupRail } from "@/components/gameday/MatchupRail";
 import { PreKickoff } from "@/components/gameday/PreKickoff";
 import { RootingBar } from "@/components/gameday/RootingBar";
+import { Modal } from "@/components/ui/Modal";
 import { EmptyState, Pill } from "@/components/ui/primitives";
 import type { GamedayData, RootingMode } from "@/lib/domain/gameday";
 import { useGamedayPoll } from "@/hooks/useGamedayPoll";
@@ -86,18 +87,32 @@ export function GamedayShell({ initialData }: { initialData: GamedayData }) {
     return { live, starters, leagues: data.matchups.length, next };
   }, [data]);
 
+  /** The game the dialog is showing, for its title. */
+  const openGame = openEventId ? gameById.get(openEventId) : undefined;
+
   const warnings = error ? [...data.warnings, error] : data.warnings;
 
   return (
     <div className="sc-gameday">
-      <Header
-        week={data.viewedWeek}
-        summary={summary}
-        generatedAt={generatedAt}
-        anyLive={data.anyLive}
-        refreshing={refreshing}
-        onRefresh={refresh}
-      />
+      <div className="sc-gameday-chrome">
+        <Header
+          week={data.viewedWeek}
+          summary={summary}
+          generatedAt={generatedAt}
+          anyLive={data.anyLive}
+          refreshing={refreshing}
+          onRefresh={refresh}
+        />
+
+        <RootingBar
+          rooting={data.rooting[mode]}
+          games={gameById}
+          mode={mode}
+          onMode={setMode}
+        />
+      </div>
+
+      <div className="sc-gameday-body">
 
       {warnings.length > 0 && (
         <div
@@ -117,13 +132,6 @@ export function GamedayShell({ initialData }: { initialData: GamedayData }) {
       )}
 
       <PreKickoff alerts={data.alerts} />
-
-      <RootingBar
-        rooting={data.rooting[mode]}
-        games={gameById}
-        mode={mode}
-        onMode={setMode}
-      />
 
       <div className="sc-gameday-grid">
         <section>
@@ -149,8 +157,7 @@ export function GamedayShell({ initialData }: { initialData: GamedayData }) {
               <button
                 type="button"
                 className="sc-btn"
-                onClick={() => setShowTimeline((v) => !v)}
-                aria-expanded={showTimeline}
+                onClick={() => setShowTimeline(true)}
                 style={{
                   marginTop: 8,
                   width: "100%",
@@ -159,13 +166,9 @@ export function GamedayShell({ initialData }: { initialData: GamedayData }) {
                   color: "var(--sc-text-muted)",
                 }}
               >
-                {showTimeline ? "Hide" : "Show"} the day so far
+                <LineChartIcon size={13} />
+                The day so far
               </button>
-              {showTimeline && (
-                <div style={{ marginTop: 8 }}>
-                  <DayTimeline week={data.viewedWeek} />
-                </div>
-              )}
             </>
           )}
         </section>
@@ -180,21 +183,35 @@ export function GamedayShell({ initialData }: { initialData: GamedayData }) {
             onOpen={handleOpen}
             openEventId={openEventId}
           />
-          {/*
-            After the wall, not before it. A keyboard or screen-reader user
-            activates a card and focus stays on that card — a panel rendered
-            upstream of it is never reached by tabbing forward and is never
-            announced.
-          */}
-          {openEventId && (
-            <GameDrillIn
-              key={openEventId}
-              eventId={openEventId}
-              onClose={handleClose}
-            />
-          )}
         </section>
       </div>
+      </div>
+
+      {/*
+        Drill-in lives in a dialog rather than in the column that launched it.
+        A box score inside the slate column was both too narrow to read and a
+        thing that pushed the games you were looking at down the page; in the
+        top layer it gets the room it needs and the overview stays an overview.
+      */}
+      <Modal
+        open={openEventId !== null}
+        onClose={handleClose}
+        size="wide"
+        title={openGame ? openGame.shortName : "Game"}
+        subtitle={openGame?.statusDetail}
+      >
+        {openEventId && <GameDrillIn key={openEventId} eventId={openEventId} />}
+      </Modal>
+
+      <Modal
+        open={showTimeline}
+        onClose={() => setShowTimeline(false)}
+        size="wide"
+        title="The day so far"
+        subtitle="Your score in each league, sampled through the afternoon"
+      >
+        {showTimeline && <DayTimeline week={data.viewedWeek} />}
+      </Modal>
     </div>
   );
 }

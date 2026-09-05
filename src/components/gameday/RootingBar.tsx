@@ -79,7 +79,7 @@ export function RootingBar({
             {rooting.length} games — scroll for more
           </span>
         )}
-        <span className="sc-note" style={{ margin: 0, fontSize: 11 }}>
+        <span className="sc-note sc-gameday-caveat" style={{ margin: 0, fontSize: 11 }}>
           {mode === "leverage"
             ? "net wins swung, weighted by how much a point moves each league — a model, not a prediction"
             : "raw projected point swing, unweighted"}
