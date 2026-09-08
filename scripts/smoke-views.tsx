@@ -24,7 +24,7 @@ import { ChartsView } from "../src/components/views/ChartsView";
 import { TradesView } from "../src/components/views/TradesView";
 import { DraftView } from "../src/components/views/DraftView";
 import { WaiverWireView } from "../src/components/views/WaiverWireView";
-import { MatchupView } from "../src/components/views/MatchupView";
+import { MatchupDetailModal, MatchupView } from "../src/components/views/MatchupView";
 import { closeDb } from "../src/lib/db/client";
 
 const noop = () => {};
@@ -35,23 +35,14 @@ function cases(data: DashboardData): Array<[string, ReactElement]> {
       "Overview",
       createElement(OverviewView, { data, onSelect: noop, onOpenMatchup: noop }),
     ],
-    [
-      "MatchupList",
-      createElement(MatchupView, {
-        data,
-        selectedTeamId: null,
-        onSelect: noop,
-        onBack: noop,
-      }),
-    ],
+    ["MatchupList", createElement(MatchupView, { data, onSelect: noop })],
     [
       "MatchupDetail",
-      createElement(MatchupView, {
+      createElement(MatchupDetailModal, {
         data,
         // Whichever team actually has a matchup this week.
-        selectedTeamId: data.teams.find((t) => t.matchup)?.id ?? null,
-        onSelect: noop,
-        onBack: noop,
+        teamId: data.teams.find((t) => t.matchup)?.id ?? null,
+        onClose: noop,
       }),
     ],
     ["PowerRankings", createElement(PowerRankingsView, { data, onSelect: noop })],

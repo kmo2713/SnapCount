@@ -42,7 +42,7 @@ import { ChartsView } from "./views/ChartsView";
 import { TradesView } from "./views/TradesView";
 import { DraftView } from "./views/DraftView";
 import { WaiverWireView } from "./views/WaiverWireView";
-import { MatchupView } from "./views/MatchupView";
+import { MatchupDetailModal, MatchupView } from "./views/MatchupView";
 
 type TabId =
   | "overview"
@@ -133,10 +133,16 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
     setTab("teams");
   }, []);
 
-  /** Jump straight into one team’s head-to-head. */
+  /**
+   * Open one team's head-to-head over whatever you are looking at.
+   *
+   * This used to switch you to the Matchups tab. From the scoreboard strip —
+   * which is on every tab — that meant checking one score threw away the view
+   * you were in and made getting back a two-step trip. The detail is a layer
+   * now, so the tab you are on is the tab you stay on.
+   */
   const openMatchup = useCallback((id: string) => {
     setMatchupTeamId(id);
-    setTab("matchups");
   }, []);
 
   const warnings = refreshError ? [...data.warnings, refreshError] : data.warnings;
@@ -318,12 +324,7 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
             />
           )}
           {tab === "matchups" && (
-            <MatchupView
-              data={data}
-              selectedTeamId={matchupTeamId}
-              onSelect={setMatchupTeamId}
-              onBack={() => setMatchupTeamId(null)}
-            />
+            <MatchupView data={data} onSelect={setMatchupTeamId} />
           )}
           {tab === "power" && <PowerRankingsView data={data} onSelect={openTeam} />}
           {tab === "standings" && <StandingsView data={data} />}
@@ -344,6 +345,17 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
           {tab === "news" && <WaiverWireView data={data} />}
         </main>
       </div>
+
+      {/*
+        Mounted by the shell, not by a tab, because the scoreboard strip that
+        opens it sits above every tab. Rendered inside the Matchups view it
+        would only exist while that tab happened to be showing.
+      */}
+      <MatchupDetailModal
+        data={data}
+        teamId={matchupTeamId}
+        onClose={() => setMatchupTeamId(null)}
+      />
     </div>
   );
 }

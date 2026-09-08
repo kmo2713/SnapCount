@@ -3,20 +3,16 @@
 /**
  * Matchups — your week's head-to-head, both lineups side by side.
  *
- * Two modes in one view: a list of every matchup you have this week, and the
- * detail for one of them. Clicking a matchup anywhere in the app lands here.
+ * A list of every matchup you have this week. The detail for one of them opens
+ * in a dialog over whatever you were looking at — mounted by the app shell,
+ * since the scoreboard strip that opens it sits above every tab.
  *
  * The lineups align on lineup *slot*, not position, so row N is the same slot
  * on both sides — which is the only way a FLEX row makes sense when one manager
  * started a WR there and the other started an RB.
  */
 import { useMemo } from "react";
-import {
-  AlertTriangle,
-  ArrowLeft,
-  CalendarOff,
-  Swords,
-} from "lucide-react";
+import { AlertTriangle, CalendarOff, Swords } from "lucide-react";
 
 import {
   buildAllMatchups,
@@ -39,23 +35,16 @@ import {
   fmt,
 } from "@/components/ui/primitives";
 import { Avatar } from "@/components/ui/Avatar";
+import { Modal } from "@/components/ui/Modal";
 
 export function MatchupView({
   data,
-  selectedTeamId,
   onSelect,
-  onBack,
 }: {
   data: DashboardData;
-  /** Which team's matchup to show. Null shows the list. */
-  selectedTeamId: string | null;
   onSelect: (teamId: string) => void;
-  onBack: () => void;
 }) {
   const all = useMemo(() => buildAllMatchups(data.teams), [data.teams]);
-
-  const selectedTeam = data.teams.find((t) => t.id === selectedTeamId);
-  const detail = selectedTeam ? buildMatchupDetail(selectedTeam) : null;
 
   if (all.length === 0) {
     return (
@@ -71,11 +60,49 @@ export function MatchupView({
     );
   }
 
-  if (detail) {
-    return <MatchupDetailView detail={detail} onBack={onBack} />;
-  }
-
   return <MatchupList matchups={all} onSelect={onSelect} week={data.viewedWeek} />;
+}
+
+/**
+ * One matchup's detail, over whatever you were looking at.
+ *
+ * Mounted by the app shell rather than by this view, for one reason: the
+ * scoreboard strip that opens it is on every tab. Rendered here it would only
+ * exist while the Matchups tab happened to be showing, so clicking a tile from
+ * Overview would set the selection and display nothing.
+ *
+ * It used to replace the matchup list entirely and hand you a Back button,
+ * which cost you the thing you were comparing against every time you opened
+ * one, and made "check the other eight" eight round trips.
+ */
+export function MatchupDetailModal({
+  data,
+  teamId,
+  onClose,
+}: {
+  data: DashboardData;
+  /** Null when nothing is open. */
+  teamId: string | null;
+  onClose: () => void;
+}) {
+  const team = data.teams.find((t) => t.id === teamId);
+  const detail = team ? buildMatchupDetail(team) : null;
+
+  return (
+    <Modal
+      open={detail !== null}
+      onClose={onClose}
+      size="wide"
+      title={
+        detail
+          ? `${detail.mine.name} vs ${detail.opponent?.name ?? "bye"}`
+          : "Matchup"
+      }
+      subtitle={detail ? `${detail.leagueName} · week ${detail.week}` : undefined}
+    >
+      {detail && <MatchupDetailView detail={detail} />}
+    </Modal>
+  );
 }
 
 /* ------------------------------------------------------------------ list -- */
@@ -273,25 +300,11 @@ function Figure({
 
 /* ---------------------------------------------------------------- detail -- */
 
-function MatchupDetailView({
-  detail,
-  onBack,
-}: {
-  detail: MatchupDetail;
-  onBack: () => void;
-}) {
+function MatchupDetailView({ detail }: { detail: MatchupDetail }) {
   const margin = projectedMargin(detail);
 
   return (
     <div>
-      <button
-        className="sc-btn"
-        onClick={onBack}
-        style={{ marginBottom: 14 }}
-      >
-        <ArrowLeft size={14} />
-        All matchups
-      </button>
 
       <div
         style={{
