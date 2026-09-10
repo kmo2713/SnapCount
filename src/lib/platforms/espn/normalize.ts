@@ -225,12 +225,30 @@ export function pairingsFor(
         opponentTeamId: other?.teamId ?? null,
         matchupId: m.id != null ? String(m.id) : null,
         /*
-         * `pointsByScoringPeriod` carries an entry only for a period that has
-         * actually scored, which makes its presence the honest test of whether
-         * a week happened. `gamesPlayed` is not: it reads 0 even on a finished
-         * week, and trusting it stored null for every completed 2025 matchup.
+         * Two fields, because ESPN uses different ones for a closed week and a
+         * live one, and reading only the first reported no score all week.
+         *
+         * `pointsByScoringPeriod` is the authoritative record once a period
+         * closes — it was verified against every completed 2025 matchup, and
+         * `gamesPlayed` is not a substitute: that reads 0 even on a finished
+         * week that scored 116.62.
+         *
+         * But mid-week it is absent entirely. Measured on a live week 1 with
+         * Wednesday's opener already final: `pointsByScoringPeriod` undefined
+         * and `totalPoints` 0 on all 12 teams, while individual players
+         * plainly had points — Jaxon Smith-Njigba on 26.2. That is what made
+         * ESPN leagues look frozen while the Sleeper ones ticked.
+         *
+         * `rosterForCurrentScoringPeriod.appliedStatTotal` is the live number,
+         * and it is still ESPN's own arithmetic rather than ours: it matched
+         * the starter sum exactly on all 12 teams and excluded a bench holding
+         * 7.00 points. Closed periods keep winning so history stays byte-for-
+         * byte what it was.
          */
-        points: side.pointsByScoringPeriod?.[String(matchupPeriod)] ?? null,
+        points:
+          side.pointsByScoringPeriod?.[String(matchupPeriod)] ??
+          side.rosterForCurrentScoringPeriod?.appliedStatTotal ??
+          null,
         entries: side.rosterForCurrentScoringPeriod?.entries ?? [],
       });
     }

@@ -134,10 +134,27 @@ export interface EspnMatchupSide {
    * finished week that scored 116.62. Use `pointsByScoringPeriod` instead.
    */
   gamesPlayed?: number;
-  /** Period -> score, present only for periods that have actually scored. */
+  /**
+   * Period -> score, present only for a period that has **closed**.
+   *
+   * Reliable for history and useless while a week is being played: mid-week it
+   * is absent entirely, even for a matchup whose players have already scored
+   * thirty points. See `appliedStatTotal` below.
+   */
   pointsByScoringPeriod?: Record<string, number>;
-  /** The full roster, with correct lineup slots. This is the one to use. */
-  rosterForCurrentScoringPeriod?: { entries?: EspnRosterEntry[] };
+  /**
+   * The full roster, with correct lineup slots. This is the one to use.
+   *
+   * `appliedStatTotal` here is the live team score: ESPN's own applied total
+   * for the starters in the requested scoring period, bench excluded. Verified
+   * against a live week — it equalled the starter sum exactly on all 12 teams,
+   * including one carrying 7.00 points on its bench that the field correctly
+   * left out.
+   */
+  rosterForCurrentScoringPeriod?: {
+    appliedStatTotal?: number;
+    entries?: EspnRosterEntry[];
+  };
   /**
    * Starters only, and its `lineupSlotId` is unusable — every entry reports
    * slot 0. Its actuals do sum to the team's score, but so do the starters in
