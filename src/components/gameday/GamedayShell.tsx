@@ -41,6 +41,23 @@ export function GamedayShell({ initialData }: { initialData: GamedayData }) {
   const handleClose = useCallback(() => setOpenEventId(null), []);
   const [showTimeline, setShowTimeline] = useState(false);
 
+  /*
+   * The rooting strip costs ~130px of permanently sticky height, which on a
+   * phone is a sixth of the screen. It is the best thing on the page for the
+   * first look of the afternoon and dead weight for the next two hours, so it
+   * folds away. Session state rather than a stored preference: the answer
+   * genuinely differs between 12:05 and 15:30.
+   */
+  const [rootingOpen, setRootingOpen] = useState(true);
+  const toggleRooting = useCallback(() => setRootingOpen((v) => !v), []);
+
+  /*
+   * Which half of the page a phone is showing. Ignored above 720px, where both
+   * panes are on screen at once and the tab strip is display:none — so this
+   * stays "matchups" forever on a laptop and costs nothing.
+   */
+  const [pane, setPane] = useState<"matchups" | "games">("matchups");
+
   const gameById = useMemo(
     () => new Map(data.games.map((g) => [g.eventId, g])),
     [data.games],
@@ -109,7 +126,41 @@ export function GamedayShell({ initialData }: { initialData: GamedayData }) {
           games={gameById}
           mode={mode}
           onMode={setMode}
+          open={rootingOpen}
+          onToggle={toggleRooting}
         />
+
+        {/*
+          Phone-only, and inside the sticky band so switching halves never
+          means scrolling back up to find the switch. Above 720px both panes
+          are visible together and this is display:none.
+        */}
+        <div className="sc-gameday-tabs" role="tablist" aria-label="Game day sections">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={pane === "matchups"}
+            className="sc-gameday-tab"
+            onClick={() => setPane("matchups")}
+          >
+            Matchups
+            <span className="sc-mono sc-gameday-tab-count">{data.matchups.length}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={pane === "games"}
+            className="sc-gameday-tab"
+            onClick={() => setPane("games")}
+          >
+            NFL games
+            <span className="sc-mono sc-gameday-tab-count">{data.games.length}</span>
+            {/* The reason you would switch tabs mid-afternoon. */}
+            {summary.live > 0 && (
+              <span className="sc-gameday-tab-live" aria-label={`${summary.live} live`} />
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="sc-gameday-body">
@@ -133,9 +184,14 @@ export function GamedayShell({ initialData }: { initialData: GamedayData }) {
 
       <PreKickoff alerts={data.alerts} />
 
-      <div className="sc-gameday-grid">
-        <section>
-          <div className="sc-section-title" style={{ marginBottom: 8 }}>
+      <div className="sc-gameday-grid" data-pane={pane}>
+        <section data-pane-id="matchups">
+          {/*
+            Redundant on a phone, where the selected tab already says which
+            half you are looking at — so it is hidden there rather than
+            spending a line of a small screen repeating the tab.
+          */}
+          <div className="sc-section-title sc-gameday-pane-title" style={{ marginBottom: 8 }}>
             Your matchups
           </div>
           {data.matchups.length === 0 ? (
@@ -173,8 +229,8 @@ export function GamedayShell({ initialData }: { initialData: GamedayData }) {
           )}
         </section>
 
-        <section>
-          <div className="sc-section-title" style={{ marginBottom: 8 }}>
+        <section data-pane-id="games">
+          <div className="sc-section-title sc-gameday-pane-title" style={{ marginBottom: 8 }}>
             The slate
           </div>
           <GameWall
@@ -232,45 +288,31 @@ function Header({
   onRefresh: () => void;
 }) {
   return (
-    <header
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        flexWrap: "wrap",
-        marginBottom: 10,
-      }}
-    >
-      <div
-        style={{
-          fontFamily: "var(--sc-font-display)",
-          fontSize: 22,
-          fontWeight: 700,
-          letterSpacing: "0.02em",
-        }}
-      >
-        GAMEDAY
-      </div>
+    <header className="sc-gameday-header">
+      <div className="sc-gameday-wordmark">GAMEDAY</div>
       <span className="sc-mono" style={{ fontSize: 12, color: "var(--sc-text-muted)" }}>
         Week {week}
       </span>
-      {anyLive ? (
-        <Pill label="LIVE" color="var(--sc-red)" />
-      ) : (
-        <Pill label="NO GAMES LIVE" color="var(--sc-text-muted)" />
-      )}
+      {/*
+        Dropped on a phone, where it was the single widest thing in the top row
+        and the reason the controls wrapped onto a row of their own. Nothing is
+        lost: the tab strip carries a live dot, and the line below reads
+        "N in progress" in red when anything is, or the next kickoff when not.
+      */}
+      <span className="sc-gameday-live-pill">
+        {anyLive ? (
+          <Pill label="LIVE" color="var(--sc-red)" />
+        ) : (
+          <Pill label="NO GAMES LIVE" color="var(--sc-text-muted)" />
+        )}
+      </span>
 
-      {/* The band that used to be empty. */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: 14,
-          fontSize: 11,
-          color: "var(--sc-text-muted)",
-          flexWrap: "wrap",
-        }}
-      >
+      {/*
+        The band that used to be empty on a laptop. On a phone there is no
+        empty band to fill, so CSS reorders this onto its own line below —
+        which is what stops the controls from landing on a third row.
+      */}
+      <div className="sc-gameday-title-meta">
         <span>
           <span className="sc-mono" style={{ color: "var(--sc-text)" }}>
             {summary.leagues}
@@ -301,10 +343,15 @@ function Header({
             </span>
           )
         )}
+        {/*
+          Sits with the other facts about the slate rather than beside the
+          refresh button. That keeps the controls row to two buttons, which is
+          what lets the whole header be two lines on a phone instead of three.
+        */}
+        <DataAge generatedAt={generatedAt} />
       </div>
 
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-        <DataAge generatedAt={generatedAt} />
+      <div className="sc-gameday-actions">
         <button
           type="button"
           className="sc-btn"
@@ -365,6 +412,16 @@ function DataAge({ generatedAt }: { generatedAt: string }) {
       // A live view that has quietly stopped updating is worse than one that
       // admits it, which is what this number is for.
       title="How old the displayed data is"
+      /*
+       * The one node on the page whose correct text differs between the server
+       * and the client by design: the server renders the age at render time and
+       * the client hydrates a moment later. When those land either side of a
+       * second boundary React reports a text mismatch and throws away the whole
+       * tree to re-render it — intermittently, roughly one load in ten, which
+       * is exactly the kind of failure that never shows up while you are
+       * looking for it. This is the sanctioned escape hatch for a timestamp.
+       */
+      suppressHydrationWarning
     >
       updated {Math.round(ageMs / 1000)}s ago
     </span>

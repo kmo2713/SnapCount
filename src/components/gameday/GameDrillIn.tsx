@@ -25,7 +25,7 @@ import {
 } from "recharts";
 
 import { Loading } from "@/components/ui/primitives";
-import type { GameDetail } from "@/lib/domain/gameday";
+import type { BoxScoreTeam, GameDetail } from "@/lib/domain/gameday";
 
 export function GameDrillIn({ eventId }: { eventId: string }) {
   const [detail, setDetail] = useState<GameDetail | null>(null);
@@ -266,65 +266,7 @@ export function GameDrillIn({ eventId }: { eventId: string }) {
             </Section>
           )}
 
-          {detail.boxScore.map((team) => (
-            <Section key={team.abbr} title={`${team.abbr} box score`}>
-              {team.categories.map((category) => (
-                <div key={category.name} style={{ marginBottom: 10 }}>
-                  <div className="sc-label" style={{ marginBottom: 3 }}>
-                    {category.name}
-                  </div>
-                  <div className="sc-table-scroll">
-                    <table className="sc-table" style={{ fontSize: 11 }}>
-                      <thead>
-                        <tr>
-                          <th>Player</th>
-                          {category.labels.map((label) => (
-                            <th key={label} style={{ textAlign: "right" }}>
-                              {label}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {category.players.map((player, i) => (
-                          <tr
-                            key={`${player.playerId ?? player.name}-${i}`}
-                            style={{
-                              background: player.mine
-                                ? "var(--sc-accent-soft)"
-                                : undefined,
-                            }}
-                          >
-                            <td
-                              className="sc-truncate"
-                              style={{
-                                color: player.mine
-                                  ? "var(--sc-accent)"
-                                  : player.against
-                                    ? "var(--sc-red)"
-                                    : undefined,
-                              }}
-                            >
-                              {player.name}
-                            </td>
-                            {category.labels.map((label, j) => (
-                              <td
-                                key={label}
-                                className="sc-mono"
-                                style={{ textAlign: "right" }}
-                              >
-                                {player.stats[j] ?? "—"}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
-            </Section>
-          ))}
+          <BoxScore teams={detail.boxScore} />
 
           {detail.drives.length > 0 && (
             <Section title={`Drives (${detail.drives.length})`}>
@@ -355,6 +297,106 @@ export function GameDrillIn({ eventId }: { eventId: string }) {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * ESPN's own category keys, made readable.
+ *
+ * They arrive as camelCase identifiers — `kickReturns`, `puntReturns` — and
+ * the heading style uppercases whatever it is given, so left alone they render
+ * as KICKRETURNS.
+ */
+function prettyCategory(name: string): string {
+  return name.replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
+/**
+ * Every category either team recorded, in the order they should be shown.
+ *
+ * Taken from the teams themselves rather than a fixed list, so a category ESPN
+ * adds still appears. The important case is the asymmetric one: a category
+ * only one team recorded — interceptions, punt returns — still has to occupy a
+ * row in both columns, or the two sides stop describing the same category and
+ * every heading below it is beside the wrong numbers.
+ */
+export function pairedCategoryNames(teams: BoxScoreTeam[]): string[] {
+  const names: string[] = [];
+  for (const team of teams) {
+    for (const category of team.categories) {
+      if (!names.includes(category.name)) names.push(category.name);
+    }
+  }
+  return names;
+}
+
+/**
+ * Both teams' box scores, side by side and paired by category.
+ *
+ * Previously this was one team's ten categories in full followed by the
+ * other's, which put roughly a thousand pixels between a quarterback and the
+ * quarterback he was playing against — the two lines you most want to read
+ * together. Pairing them puts passing beside passing and rushing beside
+ * rushing, so a comparison is a glance rather than a scroll.
+ *
+ * Each column lists a player's numbers as one dot-separated line under their
+ * name, rather than as a row of table cells, and that is the compromise that
+ * makes two columns possible at all. A passing category carries eight
+ * statistics; two of those as real tables need ~700px, and this dialog is
+ * ~340px wide on a phone. The legend above each column names the values once
+ * in the order they appear, which keeps them unambiguous without spending the
+ * width on repeated headers. One rendering serves every screen size, so there
+ * is no width at which the layout is untested.
+ */
+function BoxScore({ teams }: { teams: BoxScoreTeam[] }) {
+  const names = pairedCategoryNames(teams);
+
+  if (names.length === 0) return null;
+
+  return (
+    <>
+      {names.map((name) => (
+        <Section key={name} title={prettyCategory(name)}>
+          <div className="sc-box-pair">
+            {teams.map((team) => {
+              const category = team.categories.find((c) => c.name === name);
+              return (
+                <div key={team.abbr} className="sc-box-col">
+                  <div className="sc-box-team">{team.abbr}</div>
+                  {!category ? (
+                    <div className="sc-box-legend">nothing recorded</div>
+                  ) : (
+                    <>
+                      <div className="sc-box-legend sc-mono">
+                        {category.labels.join(" · ")}
+                      </div>
+                      {category.players.map((player, i) => (
+                        <div
+                          key={`${player.playerId ?? player.name}-${i}`}
+                          className="sc-box-row"
+                          data-side={
+                            player.mine ? "mine" : player.against ? "against" : undefined
+                          }
+                        >
+                          <div className="sc-box-name sc-truncate" title={player.name}>
+                            {player.name}
+                          </div>
+                          <div className="sc-box-stats sc-mono">
+                            {category.labels
+                              .map((_, j) => player.stats[j] ?? "—")
+                              .join(" · ")}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      ))}
+    </>
   );
 }
 

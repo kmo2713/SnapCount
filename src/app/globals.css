@@ -448,8 +448,118 @@ table.sc-table tbody tr:hover {
   padding: 12px;
 }
 
+/* -------------------------------------------------- gameday chrome bits -- */
+
+.sc-gameday-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.sc-gameday-wordmark {
+  font-family: var(--sc-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.sc-gameday-title-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--sc-text-muted);
+  flex-wrap: wrap;
+}
+
+.sc-gameday-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .sc-gameday-rooting {
   margin-top: 10px;
+}
+
+.sc-gameday-rooting-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+/*
+ * The collapse control is the title itself. Reset to look like text rather
+ * than a button, since a bordered control here would read as a third mode
+ * switch beside Leverage/Raw rather than as the heading it replaces.
+ */
+.sc-gameday-rooting-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-height: 32px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sc-gameday-rooting-toggle:hover .sc-section-title {
+  color: var(--sc-text);
+}
+
+/*
+ * The phone tab strip. Hidden by default rather than shown by default: above
+ * 720px both panes are on screen together and a switch between them would be
+ * a control that does nothing.
+ */
+.sc-gameday-tabs {
+  display: none;
+}
+
+.sc-gameday-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+  color: var(--sc-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sc-gameday-tab[aria-selected="true"] {
+  color: var(--sc-accent);
+  border-color: var(--sc-accent-border);
+  background: var(--sc-accent-soft);
+}
+
+.sc-gameday-tab-count {
+  font-size: 10px;
+  color: var(--sc-text-muted);
+}
+
+.sc-gameday-tab-live {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--sc-red);
+  flex-shrink: 0;
 }
 
 .sc-gameday-strip {
@@ -551,6 +661,83 @@ table.sc-table tbody tr:hover {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 14px;
+}
+
+/* ------------------------------------------------------------ box score -- */
+
+/*
+ * Two teams, one category, side by side. Always two columns — including on a
+ * phone, where the alternative was scrolling past ten of one team's categories
+ * to reach the other team's.
+ */
+.sc-box-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/*
+ * Grid items default to `min-width: auto` and so refuse to shrink below their
+ * own content — one long name would push the second column off screen. Same
+ * trap as the game-day grid above.
+ */
+.sc-box-pair > * {
+  min-width: 0;
+}
+
+.sc-box-team {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sc-text);
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--sc-border);
+}
+
+/* Names the values once, in the order each row prints them. */
+.sc-box-legend {
+  font-size: 9px;
+  color: var(--sc-text-muted);
+  padding: 3px 0;
+  line-height: 1.3;
+}
+
+.sc-box-row {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--sc-border-soft);
+}
+
+.sc-box-row:last-child {
+  border-bottom: none;
+}
+
+.sc-box-name {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sc-box-stats {
+  font-size: 10px;
+  color: var(--sc-text-muted);
+  line-height: 1.4;
+}
+
+/*
+ * The join that makes this yours rather than generic. A player can be both
+ * (started by you in one league, against you in another); "mine" wins, since
+ * that is the line you are looking for.
+ */
+.sc-box-row[data-side="mine"] {
+  background: var(--sc-accent-soft);
+  /* Bleeds the tint to the column edge rather than boxing each row. */
+  box-shadow: 0 0 0 4px var(--sc-accent-soft);
+}
+
+.sc-box-row[data-side="mine"] .sc-box-name {
+  color: var(--sc-accent);
+}
+
+.sc-box-row[data-side="against"] .sc-box-name {
+  color: var(--sc-red);
 }
 
 /* --------------------------------------------------------------- mobile -- */
@@ -715,8 +902,78 @@ table.sc-table tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
-  .sc-gameday {
-    padding: 8px;
+  /*
+   * NO padding on `.sc-gameday` here, however tempting. It is the scrollport,
+   * and `position: sticky` pins to the scrollport rather than to the padding
+   * box — so 8px of padding here left an 8px band above the sticky chrome that
+   * scrolling content slid through, which is exactly the "I can see data
+   * scroll by under the header" report. The base rule above says the same
+   * thing; this block overrode it and undid it. Padding goes on the children.
+   */
+  .sc-gameday-chrome {
+    padding: 8px 10px;
+  }
+
+  .sc-gameday-body {
+    padding: 10px;
+  }
+
+  /*
+   * One half of the page at a time, chosen by the tab strip. Both panes stay
+   * mounted so switching is instant and neither refetches — the poll feeds
+   * both from one payload regardless of which is on screen.
+   */
+  .sc-gameday-tabs {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .sc-gameday-grid[data-pane="matchups"] > [data-pane-id="games"],
+  .sc-gameday-grid[data-pane="games"] > [data-pane-id="matchups"] {
+    display: none;
+  }
+
+  /* The selected tab already names the pane. */
+  .sc-gameday-pane-title {
+    display: none;
+  }
+
+  /*
+   * Identity and controls on line one, the slate facts on line two. Without
+   * the reorder the controls group wraps below the facts and claims a third
+   * 44px row of its own — 350px of a phone screen was sticky header.
+   */
+  .sc-gameday-title-meta {
+    order: 1;
+    flex-basis: 100%;
+    gap: 8px;
+    font-size: 10px;
+  }
+
+  .sc-gameday-live-pill {
+    display: none;
+  }
+
+  .sc-gameday-wordmark {
+    font-size: 18px;
+  }
+
+  /*
+   * A dialog on a phone is nearly the whole screen, so the frame gives its
+   * width back to the content — two box-score columns inside 14px padding and
+   * a 10px gutter is the difference between readable and cramped.
+   */
+  .sc-modal-body {
+    padding: 10px;
+  }
+
+  .sc-box-pair {
+    gap: 8px;
+  }
+
+  .sc-gameday-header {
+    margin-bottom: 8px;
   }
 
   /*

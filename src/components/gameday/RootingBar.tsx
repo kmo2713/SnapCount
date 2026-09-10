@@ -20,6 +20,8 @@
  *    is big enough to change how you would feel about the game — see
  *    CONFLICT_SHARE.
  */
+import { ChevronDown, ChevronRight } from "lucide-react";
+
 import { fmt } from "@/components/ui/primitives";
 import type { NflGame, RootingInterest, RootingMode } from "@/lib/domain/gameday";
 
@@ -53,65 +55,85 @@ export function RootingBar({
   games,
   mode,
   onMode,
+  open,
+  onToggle,
 }: {
   rooting: RootingInterest[];
   games: Map<string, NflGame>;
   mode: RootingMode;
   onMode: (m: RootingMode) => void;
+  /** Collapsed, this is one line — see the comment on the toggle below. */
+  open: boolean;
+  onToggle: () => void;
 }) {
+  const Chevron = open ? ChevronDown : ChevronRight;
+
   return (
     <div className="sc-gameday-rooting">
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: 8,
-          marginBottom: 6,
-          flexWrap: "wrap",
-        }}
-      >
-        <span className="sc-section-title">Where to look</span>
-        {rooting.length > 0 && (
-          <span
-            className="sc-mono"
-            style={{ fontSize: 10, color: "var(--sc-text-muted)" }}
-          >
-            {rooting.length} games — scroll for more
-          </span>
-        )}
+      <div className="sc-gameday-rooting-head">
+        {/*
+          The whole title row is the toggle, not a separate icon button beside
+          it. This band is the top ~130px of a phone screen and the thing you
+          most often want is it gone; a 44px target the width of the screen is
+          the difference between that being a gesture and being a chore.
+        */}
+        <button
+          type="button"
+          className="sc-gameday-rooting-toggle"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-controls="sc-rooting-strip"
+        >
+          <Chevron size={13} style={{ flexShrink: 0 }} />
+          <span className="sc-section-title">Where to look</span>
+          {rooting.length > 0 && (
+            <span
+              className="sc-mono"
+              style={{ fontSize: 10, color: "var(--sc-text-muted)" }}
+            >
+              {rooting.length} games
+            </span>
+          )}
+        </button>
+
         <span className="sc-note sc-gameday-caveat" style={{ margin: 0, fontSize: 11 }}>
           {mode === "leverage"
             ? "net wins swung, weighted by how much a point moves each league — a model, not a prediction"
             : "raw projected point swing, unweighted"}
         </span>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-          {(["leverage", "raw"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              className="sc-btn"
-              onClick={() => onMode(m)}
-              aria-pressed={mode === m}
-              style={{
-                fontSize: 11,
-                minHeight: 44,
-                padding: "0 10px",
-                color: mode === m ? "var(--sc-accent)" : undefined,
-                borderColor: mode === m ? "var(--sc-accent-border)" : undefined,
-              }}
-            >
-              {m === "leverage" ? "Leverage" : "Raw points"}
-            </button>
-          ))}
-        </div>
+
+        {/* Hidden with the strip: the unit only means something beside it. */}
+        {open && (
+          <div style={{ marginLeft: "auto", display: "flex", gap: 4, flexShrink: 0 }}>
+            {(["leverage", "raw"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                className="sc-btn"
+                onClick={() => onMode(m)}
+                aria-pressed={mode === m}
+                style={{
+                  fontSize: 11,
+                  minHeight: 44,
+                  padding: "0 10px",
+                  color: mode === m ? "var(--sc-accent)" : undefined,
+                  borderColor: mode === m ? "var(--sc-accent-border)" : undefined,
+                }}
+              >
+                {m === "leverage" ? "Leverage" : "Raw points"}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {rooting.length === 0 ? (
+      {!open ? null : rooting.length === 0 ? (
         <div className="sc-note" style={{ margin: 0 }}>
           None of your players are in this week&apos;s games.
         </div>
       ) : (
         <div
+          id="sc-rooting-strip"
           className="sc-gameday-strip"
           tabIndex={0}
           role="group"
