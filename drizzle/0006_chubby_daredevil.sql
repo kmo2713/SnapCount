@@ -1,0 +1,1 @@
+ALTER TABLE "gameday_plays" ALTER COLUMN "wallclock" DROP NOT NULL;

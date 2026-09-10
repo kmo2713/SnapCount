@@ -46,7 +46,7 @@ const globalForDetail = globalThis as unknown as {
 };
 
 /** Everything the drill-in needs that does not change during a game. */
-interface DrillInContext {
+export interface DrillInContext {
   marks: RosterMarks;
   /** Canonical player id -> every league you have a stake in them through. */
   roles: Map<string, PlayerLeagueRole[]>;
@@ -72,7 +72,10 @@ const globalForContext = globalThis as unknown as {
   snapCountDrillInContext?: { key: string; context: DrillInContext; builtAt: number };
 };
 
-async function drillInContext(season: string, week: number): Promise<DrillInContext> {
+export async function drillInContext(
+  season: string,
+  week: number,
+): Promise<DrillInContext> {
   const key = `${season}:${week}`;
   const cached = globalForContext.snapCountDrillInContext;
   if (cached && cached.key === key && Date.now() - cached.builtAt < CONTEXT_TTL_MS) {

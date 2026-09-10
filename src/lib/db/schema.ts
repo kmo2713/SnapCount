@@ -598,3 +598,81 @@ export const gamedaySnapshots = pgTable(
     index("gameday_snapshots_captured_idx").on(t.capturedAt),
   ],
 );
+
+/**
+ * Every NFL play you had a stake in, with what it was worth to you.
+ *
+ * A row per play rather than a blob per sample, which is the opposite choice
+ * from `gamedaySnapshots` above and for the opposite reason: a snapshot is read
+ * whole to draw a line, while these are queried by time range and ranked by
+ * size to answer "what swung my week". A full Sunday is roughly 2,500 plays
+ * across thirteen games, of which the ones touching your rosters are a few
+ * hundred — small enough to keep a row each and index properly.
+ *
+ * Written incrementally by the sync job, which is what makes this possible at
+ * all: ESPN's play feed is ~774KB for one finished game, so re-reading every
+ * game every cycle is not an option. The job compares its stored play count
+ * against ESPN's (a 1.7KB request) and pulls only the tail when it is behind.
+ *
+ * **Every** play in the feed gets a row, including kickoffs, timeouts and the
+ * ones involving nobody you own — which is why `impact` is often `{}`. That
+ * looks wasteful and is load-bearing: the row count per event is the watermark
+ * the tail fetch compares against, so it has to mean the same thing as ESPN's
+ * `count`. Keeping only the plays that mattered made the ledger permanently
+ * 83 rows "behind" a 180-play game and re-fetched two pages every five minutes
+ * forever. The alternative — storing a separate cursor — is a second source of
+ * truth that says "done" even when the insert it recorded actually failed;
+ * counting rows self-heals on the next cycle instead.
+ *
+ * `impact` is `{ leagueId: netPoints }` from your side of the play — positive
+ * when it helped you, whether that was your starter gaining or your opponent's
+ * losing. Stored rather than derived on read because it depends on the rosters
+ * and scoring rules *as they were*, and a trade on Tuesday must not silently
+ * rewrite what Sunday's plays were worth.
+ */
+export const gamedayPlays = pgTable(
+  "gameday_plays",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    season: text().notNull(),
+    week: integer().notNull(),
+    /** ESPN event id for the NFL game. */
+    eventId: text().notNull(),
+    /** ESPN's own play id. The dedupe key — a cron may re-read a page. */
+    playId: text().notNull(),
+    /**
+     * ESPN's ordering number within the game. Not strictly monotonic in the
+     * feed: measured, six of 180 plays sit one position out, always a scoring
+     * summary beside the play it summarises. Kept for ordering within a
+     * second, never trusted as a watermark.
+     */
+    sequence: integer().notNull(),
+    /**
+     * When the play actually happened, per ESPN's own `wallclock`.
+     *
+     * The reason attribution is possible: it is real clock time, to the
+     * second, so a play can be matched against a snapshot window recorded
+     * hours later. Measured caveat — it can run up to ~227s out of order
+     * against feed position, so a window match needs a tolerance rather than
+     * an exact boundary.
+     *
+     * Nullable because the feed's synthetic markers ("GAME") carry no time.
+     * Those rows exist only to keep the count honest — see the note on why
+     * every play is stored — and attribution skips them.
+     */
+    wallclock: timestamp({ withTimezone: true }),
+    period: integer().notNull(),
+    clock: text().notNull(),
+    teamAbbr: text(),
+    text: text().notNull(),
+    scoringPlay: boolean().notNull().default(false),
+    /** League id -> net fantasy points to you. See the note above. */
+    impact: jsonb().notNull(),
+    capturedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("gameday_plays_play_uq").on(t.playId),
+    index("gameday_plays_when_idx").on(t.season, t.week, t.wallclock),
+    index("gameday_plays_event_idx").on(t.eventId),
+  ],
+);

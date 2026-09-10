@@ -158,6 +158,31 @@ export function matchupTimeline(
 }
 
 /**
+ * The time window each swing should be blamed on.
+ *
+ * A swing is a change *since the previous sample*, so the window runs from
+ * that sample to this one. Blaming the instant it was noticed would look for
+ * causes after the fact, and every attribution would name the plays that
+ * happened next rather than the ones responsible.
+ *
+ * The first point has no predecessor and is skipped — its "swing" is zero by
+ * construction, but a caller that ranked by magnitude and got a first point
+ * through would otherwise search from the beginning of time.
+ */
+export function swingWindows(
+  points: TimelinePoint[],
+  swings: TimelinePoint[],
+): Array<{ from: Date; to: Date }> {
+  const indexByTime = new Map(points.map((p, i) => [p.at, i]));
+
+  return swings.flatMap((swing) => {
+    const index = indexByTime.get(swing.at);
+    if (index == null || index === 0) return [];
+    return [{ from: new Date(points[index - 1].at), to: new Date(swing.at) }];
+  });
+}
+
+/**
  * The swings worth listing, biggest first.
  *
  * Ordered by size rather than by time because the question this answers is

@@ -26,9 +26,20 @@ import {
 import { Loading } from "@/components/ui/primitives";
 import type { TimelinePoint } from "@/lib/domain/matchup-timeline";
 
+interface AttributedPlay {
+  playId: string;
+  wallclock: string;
+  period: number;
+  clock: string;
+  teamAbbr: string | null;
+  text: string;
+  scoringPlay: boolean;
+  net: number;
+}
+
 interface TimelineResponse {
   points: TimelinePoint[];
-  swings: TimelinePoint[];
+  swings: Array<TimelinePoint & { plays: AttributedPlay[] }>;
   samples: number;
 }
 
@@ -163,37 +174,63 @@ export function MatchupTimeline({
             Biggest moves
           </div>
           {/*
-            Named, not explained. The samples know the probability moved, by how
-            much, and which NFL games changed score in that five minutes. They
-            do not know which play did it — a fantasy swing comes off a stat
-            line and a five-minute sample holds no plays — so this reports what
-            it can stand behind and stops there.
+            Each swing carries the plays behind it, from the play ledger —
+            matched by ESPN's own wallclock against the window between the
+            previous sample and this one. Not "which games moved" but which
+            snaps, and what each was worth to you in this league.
           */}
           {data.swings.map((swing) => (
-            <div key={swing.at} className="sc-swing">
-              <span
-                className="sc-mono sc-swing-value"
-                data-effect={swing.swing > 0 ? "help" : "hurt"}
-              >
-                {swingLabel(swing.swing)}
-              </span>
-              <span className="sc-mono sc-swing-time">{clock(swing.at)}</span>
-              <span className="sc-swing-detail">
-                you {swing.myGain >= 0 ? "+" : "−"}
-                {Math.abs(swing.myGain).toFixed(1)}
-                {swing.opponentGain !== 0 && (
-                  <>
-                    , them {swing.opponentGain >= 0 ? "+" : "−"}
-                    {Math.abs(swing.opponentGain).toFixed(1)}
-                  </>
-                )}
-                {swing.movedGames.length > 0 && (
-                  <span style={{ color: "var(--sc-text-muted)" }}>
-                    {" "}
-                    · {swing.movedGames.slice(0, 3).join(", ")}
-                  </span>
-                )}
-              </span>
+            <div key={swing.at} className="sc-swing-group">
+              <div className="sc-swing">
+                <span
+                  className="sc-mono sc-swing-value"
+                  data-effect={swing.swing > 0 ? "help" : "hurt"}
+                >
+                  {swingLabel(swing.swing)}
+                </span>
+                <span className="sc-mono sc-swing-time">{clock(swing.at)}</span>
+                <span className="sc-swing-detail">
+                  you {swing.myGain >= 0 ? "+" : "−"}
+                  {Math.abs(swing.myGain).toFixed(1)}
+                  {swing.opponentGain !== 0 && (
+                    <>
+                      , them {swing.opponentGain >= 0 ? "+" : "−"}
+                      {Math.abs(swing.opponentGain).toFixed(1)}
+                    </>
+                  )}
+                </span>
+              </div>
+
+              {swing.plays.length > 0 ? (
+                <ul className="sc-swing-plays">
+                  {swing.plays.map((play) => (
+                    <li key={play.playId}>
+                      <span
+                        className="sc-mono sc-swing-play-net"
+                        data-effect={play.net > 0 ? "help" : "hurt"}
+                      >
+                        {play.net > 0 ? "+" : "−"}
+                        {Math.abs(play.net).toFixed(1)}
+                      </span>
+                      <span className="sc-mono sc-swing-play-when">
+                        {play.teamAbbr ? `${play.teamAbbr} ` : ""}Q{play.period}{" "}
+                        {play.clock}
+                      </span>
+                      <span>{play.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                /*
+                 * A swing with no play behind it is a real state, not a gap to
+                 * paper over: the ledger only holds games you have a stake in,
+                 * and a projection can move as a game ends without any play of
+                 * yours in it.
+                 */
+                <div className="sc-swing-plays sc-swing-plays-empty">
+                  no play of yours recorded in this window
+                </div>
+              )}
             </div>
           ))}
         </div>

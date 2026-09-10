@@ -701,6 +701,64 @@ table.sc-table tbody tr:hover {
   min-width: 0;
 }
 
+.sc-swing-group {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--sc-border-soft);
+}
+
+.sc-swing-group:last-child {
+  border-bottom: none;
+}
+
+/* The swing row above owns the divider for the whole group. */
+.sc-swing-group .sc-swing {
+  border-bottom: none;
+  padding-bottom: 1px;
+}
+
+.sc-swing-plays {
+  list-style: none;
+  margin: 0;
+  /* Indented to the width of the swing value it belongs to. */
+  padding: 0 0 0 42px;
+  font-size: 10px;
+  color: var(--sc-text-muted);
+}
+
+.sc-swing-plays li {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 1px 0;
+}
+
+.sc-swing-plays li > :last-child {
+  min-width: 0;
+}
+
+.sc-swing-play-net {
+  font-weight: 700;
+  flex-shrink: 0;
+  min-width: 30px;
+}
+
+.sc-swing-play-net[data-effect="help"] {
+  color: var(--sc-green);
+}
+
+.sc-swing-play-net[data-effect="hurt"] {
+  color: var(--sc-red);
+}
+
+.sc-swing-play-when {
+  flex-shrink: 0;
+}
+
+.sc-swing-plays-empty {
+  font-style: italic;
+  opacity: 0.75;
+}
+
 /* ---------------------------------------------------------- play impact -- */
 
 .sc-play-impacts {

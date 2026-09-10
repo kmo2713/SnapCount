@@ -36,6 +36,20 @@
       "when": 1788560538244,
       "tag": "0004_sad_millenium_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789070381217,
+      "tag": "0005_graceful_ozymandias",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789070765536,
+      "tag": "0006_chubby_daredevil",
+      "breakpoints": true
     }
   ]
 }

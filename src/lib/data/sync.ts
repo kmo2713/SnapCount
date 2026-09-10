@@ -18,7 +18,9 @@ import {
 } from "@/lib/platforms/espn/players";
 import { fetchByeWeeks } from "@/lib/platforms/nfl/schedule";
 import { loadGameday } from "./gameday";
+import { drillInContext } from "./gameday-detail";
 import { writeSnapshot } from "./gameday-snapshot";
+import { syncPlayLedger } from "./play-ledger";
 import {
   readEspnLiveWeek,
   syncEspnLeaguesInner,
@@ -668,6 +670,29 @@ export async function syncAllLiveScores(
   }
 
   /*
+   * The play ledger, before the snapshot.
+   *
+   * Order matters: the snapshot records the win probability at this moment, and
+   * the ledger records the plays that produced it. Writing the plays first
+   * means a swing between the previous sample and this one always has its
+   * evidence already in the table, rather than arriving five minutes late.
+   *
+   * Like the snapshot, it is never allowed to fail the scores it follows.
+   */
+  try {
+    results.push(await syncPlays(season, week));
+  } catch (err) {
+    results.push({
+      scope: "plays",
+      stats: {},
+      warnings: [
+        `Play ledger failed: ${err instanceof Error ? err.message : String(err)}`,
+      ],
+      durationMs: 0,
+    });
+  }
+
+  /*
    * Record the moment, last, so the sample reflects the scores just written.
    *
    * This is the day timeline's only writer, and it lives here rather than in
@@ -693,6 +718,48 @@ export async function syncAllLiveScores(
   }
 
   return results;
+}
+
+/**
+ * Brings the play ledger up to date.
+ *
+ * Reads the slate through `loadGameday` for the same reason the snapshot does
+ * — it is the one place that knows which games exist and what state each is in
+ * — and the roster and scoring context through `drillInContext`, which is
+ * memoised for five minutes and shared with the drill-in. So a cycle where
+ * nothing has happened costs one small request per live game and no database
+ * writes at all.
+ */
+export async function syncPlays(
+  season?: string,
+  week?: number,
+): Promise<SyncResult> {
+  return recorded("plays", null, async () => {
+    const data = await loadGameday({ season, week });
+    const context = await drillInContext(data.state.season, data.viewedWeek);
+
+    const stats = await syncPlayLedger(
+      data.state.season,
+      data.viewedWeek,
+      data.games.map((g) => ({ eventId: g.eventId, state: g.state })),
+      {
+        roles: context.roles,
+        canonicalId: context.marks.canonicalId,
+        teamAbbrById: context.teamAbbrById,
+        scoringByLeague: context.scoringByLeague,
+      },
+    );
+
+    return {
+      stats: {
+        probed: stats.probed,
+        fetched: stats.fetched,
+        pages: stats.pages,
+        inserted: stats.inserted,
+      },
+      warnings: stats.warnings,
+    };
+  });
 }
 
 /**

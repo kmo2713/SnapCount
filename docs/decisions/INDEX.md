@@ -39,6 +39,10 @@ Searchable by the YAML frontmatter in each file: `category`, `tags`, `applies_to
 
 ## Patterns
 
+- [2026-09-10 — A row count is a watermark; a filtered one is not](2026-09-10-pattern-a-row-count-is-a-watermark-a-filtered-one-is-not.md)
+  — the ledger stored only the plays that mattered and compared that count against ESPN's
+  total, leaving it permanently 83 rows "behind" a game it had read completely. Found by
+  running the sync twice, not once.
 - [2026-09-04 — A cache bounds duplicate work, not an enumerating caller](2026-09-04-pattern-cost-ceilings-need-counting-not-caching.md)
   — measured: 54 round-robin requests rebuilt 54 times even with a slot per key, because
   the TTL that makes a live cache correct makes it useless as a ceiling. Count, don't cache.

@@ -19,8 +19,10 @@ import type { GamedayData } from "@/lib/domain/gameday";
 import {
   keySwings,
   matchupTimeline,
+  swingWindows,
   type TimelinePoint,
 } from "@/lib/domain/matchup-timeline";
+import { readAttributionFor, type AttributedPlay } from "./play-ledger";
 
 const { gamedaySnapshots } = schema;
 
@@ -191,7 +193,11 @@ export async function readMatchupTimeline(
   season: string,
   week: number,
   leagueId: string,
-): Promise<{ points: TimelinePoint[]; swings: TimelinePoint[]; samples: number }> {
+): Promise<{
+  points: TimelinePoint[];
+  swings: Array<TimelinePoint & { plays: AttributedPlay[] }>;
+  samples: number;
+}> {
   const rows = await readTimeline(season, week);
 
   const points = matchupTimeline(
@@ -204,12 +210,33 @@ export async function readMatchupTimeline(
   );
 
   /*
+   * Each swing gets the plays behind it, from the ledger. The window runs from
+   * the previous sample to this one, because a swing is a change *since* the
+   * last reading — attributing it to the instant it was noticed would look for
+   * causes after the fact.
+   */
+  const swings = keySwings(points);
+  const plays = await readAttributionFor(
+    season,
+    week,
+    leagueId,
+    swingWindows(points, swings),
+  );
+
+  /*
    * `samples` is the number of rows read, not the number plotted. The two
    * differ whenever a league had not kicked off yet, and the gap is the
    * difference between "no data recorded" and "nothing to draw for this
    * league" — which the empty state needs to tell apart.
    */
-  return { points, swings: keySwings(points), samples: rows.length };
+  return {
+    points,
+    swings: swings.map((swing) => ({
+      ...swing,
+      plays: plays.get(swing.at) ?? [],
+    })),
+    samples: rows.length,
+  };
 }
 
 /** How many samples exist for a week — cheap enough to call from a health check. */

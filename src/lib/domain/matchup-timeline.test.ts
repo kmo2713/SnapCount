@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   keySwings,
   matchupTimeline,
+  swingWindows,
   SWING_THRESHOLD,
   type TimelineSample,
 } from "./matchup-timeline";
@@ -144,5 +145,55 @@ describe("keySwings", () => {
   it("treats exactly the threshold as a swing", () => {
     const swings = keySwings(series(50, 50 + SWING_THRESHOLD));
     expect(swings).toHaveLength(1);
+  });
+});
+
+describe("swingWindows", () => {
+  const series = (...pcts: number[]) =>
+    matchupTimeline(
+      pcts.map((p, i) =>
+        sample(i * 5, [
+          { leagueId: L, winProbability: p / 100, survival: null, myScore: i * 10, opponentScore: 0 },
+        ]),
+      ),
+      L,
+    );
+
+  it("runs from the previous sample to the swing, not from the swing", () => {
+    /*
+     * The bug this guards: attributing a swing to the moment it was noticed
+     * looks for causes *after* the fact, and names whatever happened next.
+     * Five minutes of football always contains something plausible, so the
+     * output would look right and be wrong every time.
+     */
+    const points = series(40, 40, 65);
+    const windows = swingWindows(points, keySwings(points));
+
+    expect(windows).toHaveLength(1);
+    expect(windows[0].from.getTime()).toBe(points[1].at);
+    expect(windows[0].to.getTime()).toBe(points[2].at);
+  });
+
+  it("skips a first point, which has no window behind it", () => {
+    const points = series(70, 71);
+    expect(swingWindows(points, [points[0]])).toEqual([]);
+  });
+
+  it("ignores a swing that is not in the series", () => {
+    const points = series(40, 65);
+    const stranger = { ...points[1], at: points[1].at + 999_999 };
+    expect(swingWindows(points, [stranger])).toEqual([]);
+  });
+
+  it("returns one window per swing", () => {
+    const points = series(40, 60, 40, 60);
+    const windows = swingWindows(points, keySwings(points));
+    expect(windows).toHaveLength(3);
+    for (const w of windows) expect(w.to.getTime()).toBeGreaterThan(w.from.getTime());
+  });
+
+  it("is empty when nothing swung", () => {
+    const points = series(50, 51, 52);
+    expect(swingWindows(points, keySwings(points))).toEqual([]);
   });
 });

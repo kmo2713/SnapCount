@@ -340,6 +340,17 @@ interface EspnCorePlay {
   participants?: Array<{ athlete?: { $ref?: string }; type?: string }>;
   /** "Pass Reception", "Pass Interception Return" — how a play is scored. */
   type?: { id?: string; text?: string };
+  /**
+   * Real clock time, to the second: "2026-09-10T02:08:11Z".
+   *
+   * The field that makes attribution possible — it lets a play recorded now be
+   * matched against a probability sample taken hours later. Present on every
+   * play in a measured game except the synthetic "GAME" marker, and it can run
+   * up to ~227s out of order against feed position, so callers matching a time
+   * window need a tolerance.
+   */
+  wallclock?: string;
+  sequenceNumber?: string;
 }
 
 /**
@@ -359,6 +370,38 @@ function teamIdFromRef(ref: string | undefined): string | null {
   if (!ref) return null;
   const match = /\/teams\/(\d+)/.exec(ref);
   return match ? match[1] : null;
+}
+
+/**
+ * The players in a play you have a stake in, deduplicated.
+ *
+ * Shared by the drill-in feed and the ledger so the two can never disagree
+ * about whether a play involved you — which would show as a play appearing in
+ * one and not the other.
+ */
+function involvedIn(
+  play: EspnCorePlay,
+  roles: ReadonlyMap<string, PlayerLeagueRole[]>,
+  canonicalId: ReadonlyMap<string, string>,
+): PlayEvent["involved"] {
+  const involved: PlayEvent["involved"] = [];
+  const seen = new Set<string>();
+
+  for (const participant of play.participants ?? []) {
+    const espnId = athleteIdFromRef(participant.athlete?.$ref);
+    if (!espnId || seen.has(espnId)) continue;
+    seen.add(espnId);
+
+    const playerId = canonicalId.get(espnId);
+    if (!playerId) continue;
+
+    const playerRoles = roles.get(playerId);
+    if (!playerRoles || playerRoles.length === 0) continue;
+
+    involved.push({ playerId, espnId, roles: playerRoles });
+  }
+
+  return involved;
 }
 
 /**
@@ -439,23 +482,7 @@ export function normalizePlays(
   const feed: PlayEvent[] = [];
 
   for (const play of items) {
-    const involved: PlayEvent["involved"] = [];
-    const seen = new Set<string>();
-
-    for (const participant of play.participants ?? []) {
-      const espnId = athleteIdFromRef(participant.athlete?.$ref);
-      if (!espnId || seen.has(espnId)) continue;
-      seen.add(espnId);
-
-      const playerId = canonicalId.get(espnId);
-      if (!playerId) continue;
-
-      const playerRoles = roles.get(playerId);
-      if (!playerRoles || playerRoles.length === 0) continue;
-
-      involved.push({ playerId, espnId, roles: playerRoles });
-    }
-
+    const involved = involvedIn(play, roles, canonicalId);
     if (involved.length === 0) continue;
 
     const teamId = teamIdFromRef(play.team?.$ref);
@@ -480,6 +507,122 @@ export function normalizePlays(
 
   // Newest first: a live feed is read from the top.
   return feed.reverse();
+}
+
+/** One play as the ledger stores it. */
+export interface LedgerPlay {
+  playId: string;
+  sequence: number;
+  /** Null for the feed's synthetic markers, which carry no time. */
+  wallclock: Date | null;
+  period: number;
+  clock: string;
+  teamAbbr: string | null;
+  text: string;
+  scoringPlay: boolean;
+  /**
+   * League id -> net fantasy points to you. Empty for the great majority of
+   * plays: a kickoff, or a run by someone nobody in your leagues starts.
+   */
+  impact: Record<string, number>;
+}
+
+/**
+ * Every play in the feed, each carrying what it was worth to you.
+ *
+ * Deliberately *not* filtered down to the plays that touched your rosters,
+ * which is the obvious thing to do and is wrong here. The ledger's row count
+ * per game is the watermark the tail fetch compares against ESPN's `count`, so
+ * it has to count the same things ESPN does. Filtering left the ledger
+ * permanently 83 rows behind a 180-play game, re-fetching two pages every
+ * cycle and never catching up.
+ *
+ * So the filtering happens on read instead — a play with an empty `impact` can
+ * never match a league, and is never offered as evidence for anything.
+ */
+export function normalizeLedgerPlays(
+  items: EspnCorePlay[],
+  roles: ReadonlyMap<string, PlayerLeagueRole[]>,
+  canonicalId: ReadonlyMap<string, string>,
+  teamAbbrById: ReadonlyMap<string, string>,
+  scoringByLeague: ReadonlyMap<string, ScoringSettings | null>,
+): LedgerPlay[] {
+  const out: LedgerPlay[] = [];
+
+  for (const play of items) {
+    if (!play.id) continue;
+
+    const at = play.wallclock ? new Date(play.wallclock) : null;
+    const wallclock = at && !Number.isNaN(at.getTime()) ? at : null;
+
+    const involved = involvedIn(play, roles, canonicalId);
+    const yards = typeof play.statYardage === "number" ? play.statYardage : null;
+
+    const impact: Record<string, number> = {};
+    if (involved.length > 0) {
+      for (const league of impactFor(play, involved, yards, scoringByLeague)) {
+        if (league.net != null) impact[league.leagueId] = league.net;
+      }
+    }
+
+    const teamId = teamIdFromRef(play.team?.$ref);
+
+    out.push({
+      playId: play.id,
+      sequence: Number(play.sequenceNumber ?? 0) || 0,
+      wallclock,
+      period: play.period?.number ?? 0,
+      clock: play.clock?.displayValue?.trim() ?? "",
+      teamAbbr: teamId ? (teamAbbrById.get(teamId) ?? null) : null,
+      text: play.text?.trim() || play.shortText?.trim() || "",
+      scoringPlay: play.scoringPlay === true,
+      impact,
+    });
+  }
+
+  return out;
+}
+
+/**
+ * How many plays ESPN has for a game.
+ *
+ * 1.7KB, which is the whole point: it is what lets the ledger decide whether
+ * to spend 774KB. Asked once per game per cycle.
+ */
+export async function fetchPlayCount(eventId: string): Promise<number> {
+  if (!/^\d+$/.test(eventId)) throw new Error("eventId must be numeric");
+
+  const res = await fetch(
+    `${PLAYS_URL}/events/${eventId}/competitions/${eventId}/plays?limit=1`,
+    { headers: { accept: "application/json" }, cache: "no-store" },
+  );
+  if (!res.ok) throw new Error(`ESPN plays count responded ${res.status}`);
+
+  const body = (await res.json()) as { count?: number };
+  return typeof body.count === "number" ? body.count : 0;
+}
+
+/** Raw plays from specific pages, concatenated in the order requested. */
+export async function fetchPlayPages(
+  eventId: string,
+  pages: number[],
+  pageSize: number,
+): Promise<EspnCorePlay[]> {
+  if (!/^\d+$/.test(eventId)) throw new Error("eventId must be numeric");
+
+  const out: EspnCorePlay[] = [];
+  for (const page of pages) {
+    const res = await fetch(
+      `${PLAYS_URL}/events/${eventId}/competitions/${eventId}/plays` +
+        `?limit=${pageSize}&page=${page}`,
+      { headers: { accept: "application/json" }, cache: "no-store" },
+    );
+    if (!res.ok) throw new Error(`ESPN plays page ${page} responded ${res.status}`);
+
+    const body = (await res.json()) as { items?: EspnCorePlay[] };
+    out.push(...(body.items ?? []));
+  }
+  return out;
 }
 
 /**
