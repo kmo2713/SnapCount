@@ -16,6 +16,11 @@ import { and, asc, eq, sql } from "drizzle-orm";
 
 import { requireDb, schema } from "@/lib/db/client";
 import type { GamedayData } from "@/lib/domain/gameday";
+import {
+  keySwings,
+  matchupTimeline,
+  type TimelinePoint,
+} from "@/lib/domain/matchup-timeline";
 
 const { gamedaySnapshots } = schema;
 
@@ -45,6 +50,28 @@ export function bucketFor(at: Date, minutes = BUCKET_MINUTES): Date {
 export interface SnapshotPayload {
   generatedAt: string;
   anyLive: boolean;
+  /**
+   * One row per matchup, carrying the win probability as it stood.
+   *
+   * Stored rather than recomputed later, for the same reason the scores are.
+   * The probability is built from every starter's projection, position sigma
+   * and game state — `buildOutlook` needs the whole lineup to get the variance
+   * right — and none of that survives in this payload. Reconstructing it from
+   * `remaining` and `yetToPlay` alone would ignore the in-progress starters
+   * entirely and draw a line more confident than the page ever was.
+   *
+   * Absent on rows written before this field existed, so every reader must
+   * treat it as optional rather than assume a number is there.
+   */
+  matchups?: Array<{
+    leagueId: string;
+    leagueName: string;
+    /** 0..1, or null in a survival league where `survival` carries it. */
+    winProbability: number | null;
+    survival: number | null;
+    myScore: number;
+    opponentScore: number | null;
+  }>;
   teams: Array<{
     leagueId: string;
     leagueName: string;
@@ -86,6 +113,14 @@ export function toSnapshotPayload(data: GamedayData): SnapshotPayload {
   return {
     generatedAt: data.generatedAt,
     anyLive: data.anyLive,
+    matchups: data.matchups.map((m) => ({
+      leagueId: m.leagueId,
+      leagueName: m.leagueName,
+      winProbability: m.winProbability,
+      survival: m.survival,
+      myScore: m.mine.score,
+      opponentScore: m.opponent?.score ?? null,
+    })),
     teams,
     games: data.games.map((g) => ({
       eventId: g.eventId,
@@ -143,6 +178,38 @@ export async function readTimeline(
     .orderBy(asc(gamedaySnapshots.bucket));
 
   return rows.map((r) => ({ bucket: r.bucket, payload: r.payload as SnapshotPayload }));
+}
+
+/**
+ * One league's win probability across the day, plus the moves worth naming.
+ *
+ * Lives here rather than in the route because it is loader work: it reads a
+ * table and shapes a result, and the route's job is to check the request and
+ * hand back JSON.
+ */
+export async function readMatchupTimeline(
+  season: string,
+  week: number,
+  leagueId: string,
+): Promise<{ points: TimelinePoint[]; swings: TimelinePoint[]; samples: number }> {
+  const rows = await readTimeline(season, week);
+
+  const points = matchupTimeline(
+    rows.map((row) => ({
+      at: row.bucket,
+      matchups: row.payload.matchups,
+      games: row.payload.games,
+    })),
+    leagueId,
+  );
+
+  /*
+   * `samples` is the number of rows read, not the number plotted. The two
+   * differ whenever a league had not kicked off yet, and the gap is the
+   * difference between "no data recorded" and "nothing to draw for this
+   * league" — which the empty state needs to tell apart.
+   */
+  return { points, swings: keySwings(points), samples: rows.length };
 }
 
 /** How many samples exist for a week — cheap enough to call from a health check. */

@@ -19,6 +19,7 @@ import { ListOrdered } from "lucide-react";
 import { memo, useState } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
+import { MatchupTimeline } from "@/components/gameday/MatchupTimeline";
 import { Modal } from "@/components/ui/Modal";
 import { FormatBadge, PlatformBadge, fmt } from "@/components/ui/primitives";
 import type { LiveMatchup, LiveMatchupSide } from "@/lib/domain/gameday";
@@ -165,6 +166,24 @@ function LiveMatchupCard({ matchup: m }: { matchup: LiveMatchup }) {
         title={m.leagueName}
         subtitle={`Week ${m.week} · all ${m.totalTeams} teams, highest score first`}
       >
+        {/*
+          The day's shape first, the standings under it. The chart is the thing
+          you cannot get anywhere else — your week turns on eight games at once
+          — and it only exists once the scheduled sync has recorded a couple of
+          samples, which it says for itself rather than rendering an empty box.
+        */}
+        {open && (
+          <div style={{ marginBottom: 14 }}>
+            <div className="sc-section-title" style={{ marginBottom: 6 }}>
+              Win chance through the day
+            </div>
+            <MatchupTimeline leagueId={m.leagueId} week={m.week} />
+          </div>
+        )}
+
+        <div className="sc-section-title" style={{ marginBottom: 6 }}>
+          Standings
+        </div>
         <table className="sc-table">
           <thead>
             <tr>

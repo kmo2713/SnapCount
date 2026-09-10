@@ -15,6 +15,8 @@ import { and, eq, inArray } from "drizzle-orm";
 import { requireDb, schema } from "@/lib/db/client";
 import type { GameDetail } from "@/lib/domain/gameday";
 import { env } from "@/lib/env";
+import { espnScoringSettings } from "@/lib/domain/espn-scoring";
+import type { ScoringSettings } from "@/lib/domain/scoring";
 import { espn } from "@/lib/platforms/espn/client";
 import {
   fetchGameDetail,
@@ -50,6 +52,13 @@ interface DrillInContext {
   roles: Map<string, PlayerLeagueRole[]>;
   /** ESPN numeric team id -> abbreviation, for resolving play team refs. */
   teamAbbrById: Map<string, string>;
+  /**
+   * League id -> that league's own scoring rates, or null when they could not
+   * be read. Needed to say what a play was worth rather than only who it
+   * involved, and read here because it belongs to the league rather than to
+   * the game.
+   */
+  scoringByLeague: Map<string, ScoringSettings | null>;
 }
 
 /**
@@ -73,9 +82,29 @@ async function drillInContext(season: string, week: number): Promise<DrillInCont
   const db = requireDb();
 
   const leagueRows = await db
-    .select({ id: leagues.id, name: leagues.name })
+    .select({
+      id: leagues.id,
+      name: leagues.name,
+      platform: leagues.platform,
+      scoringSettings: leagues.scoringSettings,
+    })
     .from(leagues)
     .where(eq(leagues.season, season));
+
+  /*
+   * Sleeper already speaks the vocabulary the scoring model uses; ESPN ships
+   * statId-keyed rules and has to be translated. Either can come back null,
+   * which the play feed shows as no number rather than as zero.
+   */
+  const scoringByLeague = new Map<string, ScoringSettings | null>();
+  for (const league of leagueRows) {
+    scoringByLeague.set(
+      league.id,
+      league.platform === "espn"
+        ? espnScoringSettings(league.scoringSettings)
+        : ((league.scoringSettings ?? null) as ScoringSettings | null),
+    );
+  }
 
   const mine = new Set<string>();
   const against = new Set<string>();
@@ -173,6 +202,7 @@ async function drillInContext(season: string, week: number): Promise<DrillInCont
     marks: { mine, against, canonicalId },
     roles,
     teamAbbrById,
+    scoringByLeague,
   };
   globalForContext.snapCountDrillInContext = { key, context, builtAt: Date.now() };
   return context;
@@ -216,6 +246,7 @@ export async function loadGameDetail(eventId: string): Promise<GameDetail> {
       context.roles,
       context.marks.canonicalId,
       context.teamAbbrById,
+      context.scoringByLeague,
     ).catch(() => null),
   ]);
 

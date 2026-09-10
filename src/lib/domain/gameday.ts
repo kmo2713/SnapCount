@@ -284,6 +284,19 @@ export interface PlayEvent {
     espnId: string;
     roles: Array<{ leagueId: string; leagueName: string; side: "mine" | "against" }>;
   }>;
+  /**
+   * What the play was worth to you, per league, from your side of it.
+   *
+   * One entry per league the play touched, summing your starters against the
+   * ones facing you — so a positive number always means the play helped you,
+   * whether it did that by your player gaining or by theirs losing.
+   *
+   * `net` is null when the play type is not one we can derive a stat line for,
+   * or when the league's scoring rules could not be read. That is shown as no
+   * number at all: claiming a play was worth 0.0 when we simply do not know is
+   * the one thing worse than staying quiet.
+   */
+  impact: Array<{ leagueId: string; leagueName: string; net: number | null }>;
 }
 
 /** Everything the drill-in shows for one game. */

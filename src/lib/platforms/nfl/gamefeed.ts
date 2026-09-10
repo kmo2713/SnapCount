@@ -23,6 +23,8 @@ import type {
   ScoringPlay,
   WinProbabilityPoint,
 } from "@/lib/domain/gameday";
+import { netForLeague, statsForPlay } from "@/lib/domain/play-impact";
+import type { ScoringSettings } from "@/lib/domain/scoring";
 import { normalizeEspnAbbr } from "./schedule";
 
 const SUMMARY_URL =
@@ -336,6 +338,8 @@ interface EspnCorePlay {
   clock?: { displayValue?: string };
   team?: { $ref?: string };
   participants?: Array<{ athlete?: { $ref?: string }; type?: string }>;
+  /** "Pass Reception", "Pass Interception Return" — how a play is scored. */
+  type?: { id?: string; text?: string };
 }
 
 /**
@@ -358,6 +362,66 @@ function teamIdFromRef(ref: string | undefined): string | null {
 }
 
 /**
+ * What one play was worth to you in each league it touched.
+ *
+ * The side of a play is decided by arithmetic rather than by whose roster a
+ * player is on, which is the whole point: an interception is negative for the
+ * quarterback, so it comes out positive in the league where you are facing
+ * him. Marking "your player" with a plus was the bug this replaces.
+ */
+function impactFor(
+  play: EspnCorePlay,
+  involved: PlayEvent["involved"],
+  yards: number | null,
+  scoringByLeague: ReadonlyMap<string, ScoringSettings | null>,
+): PlayEvent["impact"] {
+  const statsByAthlete = statsForPlay({
+    typeText: play.type?.text?.trim() ?? "",
+    yards,
+    participants: (play.participants ?? []).flatMap((p) => {
+      const espnId = athleteIdFromRef(p.athlete?.$ref);
+      return espnId && p.type ? [{ espnId, role: p.type }] : [];
+    }),
+  });
+
+  /*
+   * Every league the play touches gets an entry even when the number is
+   * unknown, so the annotation still tells you the play mattered to that
+   * league. Ordered by the leagues involved rather than by size, so a play
+   * does not reorder its own chips as the numbers change.
+   */
+  const leagueNames = new Map<string, string>();
+  const sideByAthlete = new Map<string, Map<string, "mine" | "against">>();
+
+  for (const person of involved) {
+    for (const role of person.roles) {
+      leagueNames.set(role.leagueId, role.leagueName);
+      const forLeague = sideByAthlete.get(role.leagueId) ?? new Map();
+      /*
+       * A player you start *and* face in the same league is impossible, so the
+       * first side seen is the only one.
+       */
+      if (!forLeague.has(person.espnId)) forLeague.set(person.espnId, role.side);
+      sideByAthlete.set(role.leagueId, forLeague);
+    }
+  }
+
+  const out: PlayEvent["impact"] = [];
+  for (const [leagueId, leagueName] of leagueNames) {
+    const net =
+      statsByAthlete === null
+        ? null
+        : netForLeague(
+            statsByAthlete,
+            sideByAthlete.get(leagueId) ?? new Map(),
+            scoringByLeague.get(leagueId),
+          );
+    out.push({ leagueId, leagueName, net });
+  }
+  return out;
+}
+
+/**
  * Turns raw plays into a feed of only the ones you have a stake in.
  *
  * The filtering is the point. A game has ~190 plays and you might have two
@@ -370,6 +434,7 @@ export function normalizePlays(
   roles: ReadonlyMap<string, PlayerLeagueRole[]>,
   canonicalId: ReadonlyMap<string, string>,
   teamAbbrById: ReadonlyMap<string, string>,
+  scoringByLeague: ReadonlyMap<string, ScoringSettings | null> = new Map(),
 ): PlayEvent[] {
   const feed: PlayEvent[] = [];
 
@@ -409,6 +474,7 @@ export function normalizePlays(
         play.isTurnover === true ||
         (yards != null && yards >= CONSEQUENTIAL_YARDS),
       involved,
+      impact: impactFor(play, involved, yards, scoringByLeague),
     });
   }
 
@@ -428,6 +494,7 @@ export async function fetchPlayFeed(
   roles: ReadonlyMap<string, PlayerLeagueRole[]>,
   canonicalId: ReadonlyMap<string, string>,
   teamAbbrById: ReadonlyMap<string, string>,
+  scoringByLeague: ReadonlyMap<string, ScoringSettings | null> = new Map(),
 ): Promise<PlayEvent[]> {
   if (!/^\d+$/.test(eventId)) throw new Error("eventId must be numeric");
 
@@ -439,5 +506,11 @@ export async function fetchPlayFeed(
   if (!res.ok) throw new Error(`ESPN plays responded ${res.status}`);
 
   const body = (await res.json()) as { items?: EspnCorePlay[] };
-  return normalizePlays(body.items ?? [], roles, canonicalId, teamAbbrById);
+  return normalizePlays(
+    body.items ?? [],
+    roles,
+    canonicalId,
+    teamAbbrById,
+    scoringByLeague,
+  );
 }

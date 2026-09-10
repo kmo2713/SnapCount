@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { readTimeline } from "@/lib/data/gameday-snapshot";
+import { readMatchupTimeline, readTimeline } from "@/lib/data/gameday-snapshot";
 import { env, hasDatabase } from "@/lib/env";
 import { sleeper } from "@/lib/platforms/sleeper/client";
 import { resolveViewedWeek } from "@/lib/platforms/sleeper/fetch";
@@ -41,6 +41,20 @@ export async function GET(request: Request) {
      * pivoted in the request path. More than a day of points is not a chart
      * anyone can read anyway, and the newest are the ones that matter.
      */
+    /*
+     * A league id switches this from "every league's score" to "one league's
+     * win probability". Same rows, a different question about them.
+     */
+    const leagueId = url.searchParams.get("leagueId");
+    if (leagueId) {
+      if (!/^[0-9a-fA-F-]{36}$/.test(leagueId)) {
+        return NextResponse.json({ error: "leagueId must be a uuid" }, { status: 400 });
+      }
+      return NextResponse.json(await readMatchupTimeline(season, week, leagueId), {
+        headers: { "cache-control": "no-store" },
+      });
+    }
+
     const samples = (await readTimeline(season, week)).slice(-1000);
 
     /*

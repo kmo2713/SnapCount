@@ -663,6 +663,83 @@ table.sc-table tbody tr:hover {
   padding: 14px;
 }
 
+/* --------------------------------------------------------- matchup swing -- */
+
+.sc-swing {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--sc-border-soft);
+}
+
+.sc-swing:last-child {
+  border-bottom: none;
+}
+
+.sc-swing-value {
+  font-weight: 700;
+  min-width: 34px;
+  flex-shrink: 0;
+}
+
+.sc-swing-value[data-effect="help"] {
+  color: var(--sc-green);
+}
+
+.sc-swing-value[data-effect="hurt"] {
+  color: var(--sc-red);
+}
+
+.sc-swing-time {
+  color: var(--sc-text-muted);
+  flex-shrink: 0;
+}
+
+.sc-swing-detail {
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------- play impact -- */
+
+.sc-play-impacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.sc-play-impact {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  border: 1px solid var(--sc-border);
+  color: var(--sc-text-muted);
+}
+
+.sc-play-impact[data-effect="help"] {
+  color: var(--sc-green);
+  border-color: #4c9a5b55;
+}
+
+.sc-play-impact[data-effect="hurt"] {
+  color: var(--sc-red);
+  border-color: #d9534f55;
+}
+
+/*
+ * A play worth nothing to a league still earns a chip — it tells you the
+ * league was in the play — but it is not coloured as if something happened.
+ * Same for one we could not score: it carries no number at all rather than a
+ * zero that would claim more than we know.
+ */
+.sc-play-impact[data-effect="none"],
+.sc-play-impact[data-effect="unknown"] {
+  color: var(--sc-text-muted);
+  border-color: var(--sc-border-soft);
+}
+
 /* ------------------------------------------------------------ box score -- */
 
 /*

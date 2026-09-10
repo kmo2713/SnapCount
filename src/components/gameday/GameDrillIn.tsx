@@ -203,32 +203,27 @@ export function GameDrillIn({ eventId }: { eventId: string }) {
                       </span>
                     )}
                   </div>
-                  <div
-                    style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 3 }}
-                  >
-                    {play.involved.flatMap((person) =>
-                      person.roles.map((role) => (
-                        <span
-                          key={`${person.playerId}-${role.leagueId}-${role.side}`}
-                          style={{
-                            fontSize: 9,
-                            padding: "1px 5px",
-                            borderRadius: 999,
-                            color:
-                              role.side === "mine"
-                                ? "var(--sc-green)"
-                                : "var(--sc-red)",
-                            border: `1px solid ${
-                              role.side === "mine"
-                                ? "var(--sc-green)"
-                                : "var(--sc-red)"
-                            }55`,
-                          }}
-                        >
-                          {role.side === "mine" ? "+" : "-"} {role.leagueName}
-                        </span>
-                      )),
-                    )}
+                  {/*
+                    One chip per league, coloured by what the play was actually
+                    worth there rather than by whose roster the player is on.
+                    Those are different answers: an interception is negative for
+                    the quarterback, so it is a *gain* in the league where you
+                    are facing him — which is what the old "your player = plus"
+                    chip got backwards.
+                  */}
+                  <div className="sc-play-impacts">
+                    {play.impact.map((league) => (
+                      <span
+                        key={league.leagueId}
+                        className="sc-play-impact"
+                        data-effect={effectOf(league.net)}
+                      >
+                        {league.net != null && (
+                          <span className="sc-mono">{signed(league.net)}</span>
+                        )}{" "}
+                        {league.leagueName}
+                      </span>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -298,6 +293,26 @@ export function GameDrillIn({ eventId }: { eventId: string }) {
       )}
     </div>
   );
+}
+
+/**
+ * Which way a play went for you, or "unknown" when we cannot say.
+ *
+ * Zero is its own answer and a real one — an incompletion by your quarterback
+ * genuinely cost you nothing — and is deliberately not lumped in with the
+ * plays whose worth could not be derived.
+ */
+function effectOf(net: number | null): "help" | "hurt" | "none" | "unknown" {
+  if (net == null) return "unknown";
+  if (net > 0) return "help";
+  if (net < 0) return "hurt";
+  return "none";
+}
+
+/** A point swing, always carrying its sign so the direction is unmissable. */
+function signed(net: number): string {
+  const rounded = Math.round(net * 10) / 10;
+  return `${rounded > 0 ? "+" : rounded < 0 ? "−" : ""}${Math.abs(rounded).toFixed(1)}`;
 }
 
 /**
