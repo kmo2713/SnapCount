@@ -28,6 +28,10 @@ Searchable by the YAML frontmatter in each file: `category`, `tags`, `applies_to
 - [2026-09-04 — `globalThis` outlives the code that shaped it, and `??=` preserves the old shape](2026-09-04-bug-fix-globalthis-outlives-the-code-that-shaped-it.md)
   — changing a cached shape broke every request. Not a hot-reload artifact: a warm
   serverless instance across a deploy fails identically.
+- [2026-09-10 — A third-party field that only exists when you are not watching](2026-09-10-bug-fix-a-third-party-field-that-only-exists-when-you-are-not-watching.md)
+  — ESPN moves a team's score to a different field while the week is live. Verified
+  against a season of closed weeks, silent through a live one: `null` and `0` are the
+  same answer to "did this work?"
 
 ## Patterns
 
