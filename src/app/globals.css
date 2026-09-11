@@ -283,6 +283,147 @@ table.sc-table tbody tr:hover {
   overflow-x: auto;
 }
 
+/*
+ * Secondary detail that rides under the primary cell on a phone.
+ *
+ * Every table here has columns that matter less than the two or three you
+ * actually scan — a manager's name beside the team, an NFL team beside the
+ * player. On a laptop they get their own column. On a phone that column is the
+ * difference between a table that fits and one that scrolls sideways, so the
+ * value moves under the primary cell and the column itself is dropped.
+ *
+ * Hidden by default so the desktop table is unchanged; the mobile block below
+ * turns it on at the same moment it hides the column it duplicates.
+ */
+.sc-cell-sub {
+  display: none;
+}
+
+/*
+ * A column heading with a phone-sized alternative.
+ *
+ * "Points for" needs 70px of an eight-column table's width and "Rank" needs
+ * more than the numbers under it ever will. Both have conventional short
+ * forms, so the narrow screen gets those rather than a clipped word.
+ */
+.sc-col-short {
+  display: none;
+}
+
+/* --------------------------------------------------------- matchup slots -- */
+
+/* The phone alternative to the mirrored lineup table; see MatchupView. */
+.sc-slot-stack {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sc-slot-block {
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+  padding: 7px 9px;
+}
+
+.sc-slot-label {
+  margin-bottom: 5px;
+}
+
+.sc-slot-side {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.sc-slot-side + .sc-slot-side {
+  border-top: 1px solid var(--sc-border-soft);
+}
+
+.sc-slot-who {
+  min-width: 0;
+  flex: 1;
+}
+
+.sc-slot-owner {
+  display: block;
+  font-size: 9px;
+  color: var(--sc-text-muted);
+}
+
+.sc-slot-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sc-slot-pts {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sc-slot-proj {
+  font-size: 10px;
+  color: var(--sc-text-muted);
+}
+
+/* Marked the same way the table marks it: the better projection wins. */
+.sc-slot-side[data-winning] .sc-slot-proj {
+  color: var(--sc-green);
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------ bye weeks -- */
+
+/* The phone alternative to the ten-week grid; see ByeWeekView. */
+.sc-bye-list {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sc-bye-row {
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+  padding: 8px 10px;
+}
+
+.sc-bye-team {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.sc-bye-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sc-bye-chip {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 11px;
+  color: var(--sc-text-muted);
+}
+
+/* Two starters sharing a bye is the thing this view exists to warn about. */
+.sc-bye-chip[data-heavy] {
+  color: var(--sc-red);
+  font-weight: 600;
+}
+
+.sc-bye-chip .sc-mono {
+  flex-shrink: 0;
+  min-width: 26px;
+}
+
+.sc-bye-chip-names {
+  min-width: 0;
+}
+
 /* ------------------------------------------------------------ scrollbar -- */
 
 .sc-scroll-x {
@@ -375,6 +516,69 @@ table.sc-table tbody tr:hover {
 }
 
 /** A list beside a detail pane. */
+/* ----------------------------------------------------------- scoreboard -- */
+
+.sc-scoreboard-strip {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+}
+
+.sc-scoreboard-tile {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 156px;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.sc-scoreboard-tile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sc-scoreboard-name {
+  font-size: 12px;
+  font-weight: 700;
+  max-width: 92px;
+}
+
+/* Full width in the dialog, where there is room for the whole name. */
+.sc-scoreboard-tile-stacked {
+  width: 100%;
+  min-width: 0;
+}
+
+.sc-scoreboard-tile-stacked .sc-scoreboard-name {
+  max-width: none;
+}
+
+.sc-scoreboard-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Phone only — see the strip's comment in Dashboard.tsx. */
+.sc-scoreboard-open,
+.sc-nav-open {
+  display: none;
+}
+
+.sc-nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .sc-split {
   display: flex;
   align-items: flex-start;
@@ -574,6 +778,18 @@ table.sc-table tbody tr:hover {
 .sc-gameday-strip > * {
   scroll-snap-align: start;
   flex: 0 0 auto;
+}
+
+/* The full ranked list, in the dialog behind "All N games". */
+.sc-rooting-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Phone only — the strip shows the top few and this opens the rest. */
+.sc-rooting-all {
+  display: none;
 }
 
 .sc-gameday-grid {
@@ -884,84 +1100,230 @@ table.sc-table tbody tr:hover {
  * would defeat it.
  */
 @media (max-width: 720px) {
-  /*
-   * The nav becomes a horizontal strip under the header rather than a rail.
-   * It used to collapse to a 56px icon-only column, which on a phone meant
-   * thirteen unlabelled glyphs and a fifth of the width gone.
-   */
   .sc-body {
     flex-direction: column;
   }
 
+  /*
+   * The rail is replaced, not reshaped.
+   *
+   * It was a horizontal strip here: thirteen labelled pills, 1,606px of
+   * sideways scrolling, with the destination you wanted usually off-screen and
+   * an auto-scroll to drag it back. Shrinking it to icons was the version
+   * before that, and thirteen unlabelled glyphs were worse. A phone gets the
+   * view it is on, and the full labelled list in a dialog one tap away — no
+   * sideways scroll, and every destination visible at once when you look.
+   */
   .sc-sidebar {
-    width: auto;
-    flex-direction: row;
-    gap: 6px;
-    padding: 8px 12px;
-    border-right: none;
-    border-bottom: 1px solid var(--sc-border);
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    scroll-snap-type: x proximity;
-    /*
-     * Fades the trailing edge so the strip reads as scrollable rather than
-     * clipped. Both properties, since only WebKit ships the unprefixed one.
-     */
-    -webkit-mask-image: linear-gradient(to right, #000 88%, transparent 100%);
-    mask-image: linear-gradient(to right, #000 88%, transparent 100%);
-  }
-
-  .sc-sidebar::-webkit-scrollbar {
     display: none;
   }
 
-  .sc-nav-btn {
-    /*
-     * The rail sets width:100% so buttons fill a vertical column. Left alone
-     * in a horizontal strip that makes every pill a full screen wide, which is
-     * why only one destination was visible at a time.
-     */
-    width: auto;
-    flex: 0 0 auto;
-    /* Keeps the tap target around 36px without making the strip tall. */
-    padding: 9px 13px;
-    border: 1px solid var(--sc-border);
-    scroll-snap-align: start;
+  .sc-nav-open {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    background: var(--sc-surface);
+    border: none;
+    border-bottom: 1px solid var(--sc-border);
+    color: var(--sc-text);
+    font: inherit;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    flex-shrink: 0;
   }
 
-  .sc-nav-btn.active {
-    border-color: var(--sc-accent-border);
+  /* In the dialog the rail's own full-width buttons are exactly right. */
+  .sc-nav-menu .sc-nav-btn {
+    min-height: 44px;
   }
 
   .sc-header {
     padding: 10px 14px 8px;
   }
 
-  /*
-   * The header used to take a third of the screen before any content. The
-   * scoreboard tiles lose their record line and shrink; the full picture is
-   * one tap away on Overview.
-   */
   .sc-header-top {
     gap: 8px;
   }
 
-  /* !important because these are set inline, which no selector can outrank. */
-  .sc-scoreboard-tile {
-    min-width: 128px !important;
-    padding: 7px 10px !important;
+  /*
+   * A backstop, and deliberately the last thing rather than the first.
+   *
+   * Every view above was given a layout that fits; this is not what makes them
+   * fit. It exists because `overflow-y: auto` makes the other axis compute to
+   * `auto` as well, so any future child that outgrows this pane would become a
+   * sideways drag rather than an obvious bug.
+   *
+   * It does not hide anything today. The only overflow left at 320px is eight
+   * pixels on Teams, and that is the styled vertical scrollbar above —
+   * `clientWidth` excludes a classic scrollbar while `scrollWidth` includes the
+   * space beneath it. Phones use overlay scrollbars with no width at all, so
+   * the gap does not exist on the devices this is for; it shows up in a
+   * headless browser and in a narrow desktop window.
+   *
+   * Nor does it blind the audit that found the six tables above: `scrollWidth`
+   * still reports content that is genuinely too wide even while `hidden` stops
+   * a finger reaching it.
+   */
+  .sc-content {
+    overflow-x: hidden;
+  }
+
+  /* ------------------------------------------------------------ tables -- */
+
+  /*
+   * No table scrolls sideways on a phone. Each one instead drops the columns
+   * that matter least and folds their values under the cell they belong to —
+   * see `.sc-cell-sub`. `visible` rather than `hidden`, because hiding would
+   * silently clip a table that still did not fit, and the audit that finds
+   * these measures overflow rather than looking at it.
+   */
+  .sc-table-scroll {
+    overflow-x: visible;
+  }
+
+  .sc-cell-sub {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--sc-text-muted);
+    line-height: 1.3;
+  }
+
+  /* The bye-week grid swaps for its list; see ByeWeekView. */
+  .sc-bye-table {
+    display: none;
+  }
+
+  .sc-bye-list {
+    display: flex;
+  }
+
+  /* The mirrored lineup table swaps for stacked blocks; see MatchupView. */
+  .sc-slot-table {
+    display: none;
+  }
+
+  .sc-slot-stack {
+    display: flex;
+  }
+
+  /* ------------------------------------------------- where to look --- */
+
+  /*
+   * Sixteen tiles across was 2,328px of sideways scrolling, inside chrome that
+   * stays on screen. The strip becomes a vertical list of the three games that
+   * matter most — it is ordered by rooting interest, so the top is the whole
+   * point — and the rest open in a dialog.
+   */
+  .sc-gameday-strip {
+    flex-direction: column;
+    gap: 4px;
+    overflow-x: visible;
+    scroll-snap-type: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .sc-gameday-strip > *:nth-child(n + 4) {
+    display: none;
+  }
+
+  /* A card of stacked lines becomes one line that wraps if it must. */
+  .sc-gameday-strip .sc-card,
+  .sc-rooting-list .sc-card {
+    min-width: 0;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
+    padding: 6px 8px;
+  }
+
+  .sc-rooting-all {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 6px;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--sc-text-muted);
+  }
+
+  /* Tighter cells claw back the width the dropped columns were using. */
+  table.sc-table th,
+  table.sc-table td {
+    padding: 7px 6px;
+  }
+
+  table.sc-table {
+    font-size: 12px;
   }
 
   /*
-   * The record and score stay — they are the whole point of a scoreboard. The
-   * badges go: they are repeated on every card in Overview, and here they were
-   * taking more width than the team name.
+   * Headers wrap rather than forcing a column open. "Points for" on one line
+   * is 70px of a 362px screen, and nothing about a two-line header is worse.
    */
-  .sc-scoreboard-badges {
+  table.sc-table th {
+    white-space: normal;
+  }
+
+  /*
+   * Standings is the one table whose remaining columns still cannot fit, and
+   * the reason is a cell with no upper bound: a long team name sets the
+   * column's min-content width, so "Sportsball! pants and bagels" pushed the
+   * table to 426px however narrow the screen was. Truncation cannot help while
+   * the column is free to grow — `table-layout: fixed` is what caps it, and
+   * the three numeric columns get explicit widths so the name takes what is
+   * left rather than an equal quarter.
+   *
+   * The nth-child indices count the hidden columns too, since `display: none`
+   * removes a cell from layout but not from the child list.
+   */
+  .sc-standings-table {
+    table-layout: fixed;
+  }
+
+  .sc-standings-table th:nth-child(1) {
+    width: 28px;
+  }
+
+  .sc-standings-table th:nth-child(4) {
+    width: 56px;
+  }
+
+  .sc-standings-table th:nth-child(5) {
+    width: 52px;
+  }
+
+  /*
+   * Nine tiles was 1,328px of sideways scrolling in chrome that never scrolls
+   * away. The strip goes; one button replaces it and opens the same tiles
+   * stacked, where each gets the full width instead of 143px.
+   */
+  .sc-scoreboard-strip {
     display: none;
   }
+
+  .sc-scoreboard-open {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 10px;
+    font-size: 12px;
+  }
+
+  /*
+   * The badges used to be hidden here: in a 128px tile they took more width
+   * than the team name. The only tiles a phone shows now are the stacked ones
+   * in the dialog, which have the full width, so they are worth keeping.
+   */
 
   .sc-content {
     padding: 14px 14px 32px;
@@ -993,8 +1355,17 @@ table.sc-table tbody tr:hover {
   }
 
   /* Columns worth losing before the ones that identify the row. */
-  .sc-col-optional {
+  /*
+   * Columns a phone drops. Their value, where it still matters, moves under
+   * the primary cell as an  rather than being lost.
+   */
+  .sc-col-optional,
+  .sc-col-full {
     display: none;
+  }
+
+  .sc-col-short {
+    display: inline;
   }
 
   table.sc-table th,
@@ -1016,11 +1387,28 @@ table.sc-table tbody tr:hover {
   .sc-split {
     flex-direction: column;
     gap: 14px;
+    /*
+     * `flex-start` is what the desktop row wants — it stops the aside
+     * stretching to the detail pane's height. Once this turns into a column
+     * that same value governs *width*, so each child sized to its own
+     * max-content and the Teams detail pane sat 80px past the screen. Stretch
+     * is the column's equivalent of what flex-start means in a row.
+     */
+    align-items: stretch;
   }
 
   .sc-split-aside {
     width: 100%;
     position: static;
+  }
+
+  /*
+   * A `select` sizes itself to its widest option, and league names are long:
+   * "The Burden of Proof — Chicago Football League" made a 391px control on a
+   * 382px screen. The clamp lets the UA ellipsise instead.
+   */
+  .sc-select {
+    max-width: 100%;
   }
 
   /*

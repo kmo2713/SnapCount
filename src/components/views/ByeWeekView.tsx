@@ -67,7 +67,48 @@ export function ByeWeekView({ data }: { data: DashboardData }) {
         bye is a scramble week worth planning for early.
       </p>
 
-      <div className="sc-table-scroll" style={{ marginBottom: 22 }}>
+      {/*
+        A ten-week grid cannot shed columns the way the other tables can — the
+        columns *are* the information. So a phone gets the same data as a list
+        per team, showing only the weeks that actually have someone on bye,
+        which is a handful rather than ten.
+      */}
+      <div className="sc-bye-list" style={{ marginBottom: 22 }}>
+        {table.map(({ team, byWeek }) => {
+          const hits = weeks
+            .map((w) => ({ w, players: byWeek.get(w) ?? [] }))
+            .filter((h) => h.players.length > 0);
+
+          return (
+            <div key={team.id} className="sc-bye-row">
+              <div className="sc-bye-team">{team.teamName}</div>
+              {hits.length === 0 ? (
+                <span style={{ fontSize: 11, color: "var(--sc-text-muted)" }}>
+                  no starters on bye
+                </span>
+              ) : (
+                <div className="sc-bye-chips">
+                  {hits.map(({ w, players }) => (
+                    <span
+                      key={w}
+                      className="sc-bye-chip"
+                      data-heavy={players.length >= 2 ? "" : undefined}
+                      title={players.map((p) => p.name).join(", ")}
+                    >
+                      <span className="sc-mono">W{w}</span>
+                      <span className="sc-bye-chip-names">
+                        {players.map((p) => p.name).join(", ")}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="sc-table-scroll sc-bye-table" style={{ marginBottom: 22 }}>
         <table className="sc-table" style={{ minWidth: 640 }}>
           <thead>
             <tr>

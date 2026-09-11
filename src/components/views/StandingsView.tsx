@@ -54,15 +54,28 @@ export function StandingsView({ data }: { data: DashboardData }) {
             </div>
 
             <div className="sc-table-scroll">
-              <table className="sc-table">
+              <table className="sc-table sc-standings-table">
                 <thead>
                   <tr>
-                    <th>Rank</th>
+                    {/*
+                      Six columns need 650px and a phone has 362. Manager moves
+                      under the team name and points-against is dropped — of the
+                      two totals, the one you scan is what you have scored.
+                    */}
+                    <th>
+                      <span className="sc-col-full">Rank</span>
+                      <span className="sc-col-short">#</span>
+                    </th>
                     <th>Team</th>
-                    <th>Manager</th>
+                    <th className="sc-col-optional">Manager</th>
                     <th>Record</th>
-                    <th style={{ textAlign: "right" }}>Points for</th>
-                    <th style={{ textAlign: "right" }}>Points against</th>
+                    <th style={{ textAlign: "right" }}>
+                      <span className="sc-col-full">Points for</span>
+                      <span className="sc-col-short">PF</span>
+                    </th>
+                    <th className="sc-col-optional" style={{ textAlign: "right" }}>
+                      Points against
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -78,15 +91,31 @@ export function StandingsView({ data }: { data: DashboardData }) {
                           color: r.isMine ? "var(--sc-accent)" : "var(--sc-text)",
                         }}
                       >
-                        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            minWidth: 0,
+                          }}
+                        >
                           <Avatar src={r.avatar} name={r.name} size={22} />
-                          <span className="sc-truncate">
-                            {r.name}
-                            {r.isMine && " (you)"}
+                          <span style={{ minWidth: 0 }}>
+                            <span className="sc-truncate" style={{ display: "block" }}>
+                              {r.name}
+                              {r.isMine && " (you)"}
+                            </span>
+                            {/* The Manager column, folded in on a phone. */}
+                            <span className="sc-cell-sub sc-truncate">
+                              {r.ownerName ?? "—"}
+                            </span>
                           </span>
                         </span>
                       </td>
-                      <td style={{ color: "var(--sc-text-muted)", fontSize: 12 }}>
+                      <td
+                        className="sc-col-optional"
+                        style={{ color: "var(--sc-text-muted)", fontSize: 12 }}
+                      >
                         {r.ownerName ?? "—"}
                       </td>
                       <td className="sc-mono">{r.record}</td>
@@ -97,7 +126,7 @@ export function StandingsView({ data }: { data: DashboardData }) {
                         {fmt(r.pointsFor)}
                       </td>
                       <td
-                        className="sc-mono"
+                        className="sc-mono sc-col-optional"
                         style={{ textAlign: "right", color: "var(--sc-text-muted)" }}
                       >
                         {fmt(r.pointsAgainst)}

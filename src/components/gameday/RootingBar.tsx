@@ -21,6 +21,9 @@
  *    CONFLICT_SHARE.
  */
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { useState } from "react";
+
+import { Modal } from "@/components/ui/Modal";
 
 import { fmt } from "@/components/ui/primitives";
 import type { NflGame, RootingInterest, RootingMode } from "@/lib/domain/gameday";
@@ -66,6 +69,7 @@ export function RootingBar({
   open: boolean;
   onToggle: () => void;
 }) {
+  const [showAll, setShowAll] = useState(false);
   const Chevron = open ? ChevronDown : ChevronRight;
 
   return (
@@ -139,6 +143,14 @@ export function RootingBar({
           role="group"
           aria-label="Games by rooting interest"
         >
+          {/*
+            On a laptop this is a row you scan across. On a phone it was 2,328px
+            of sideways scrolling inside sticky chrome, so it becomes a vertical
+            list showing the three games that matter most — the order is by
+            rooting interest, so the top of it is the point — with the rest a
+            tap away. The cut is made in CSS rather than by slicing here,
+            because the dialog below renders the same list in full.
+          */}
           {rooting.map((r) => (
             <RootingTile
               key={r.eventId}
@@ -149,6 +161,38 @@ export function RootingBar({
           ))}
         </div>
       )}
+
+      {open && rooting.length > 0 && (
+        <button
+          type="button"
+          className="sc-btn sc-rooting-all"
+          onClick={() => setShowAll(true)}
+        >
+          All {rooting.length} games
+        </button>
+      )}
+
+      <Modal
+        open={showAll}
+        onClose={() => setShowAll(false)}
+        title="Where to look"
+        subtitle={
+          mode === "leverage"
+            ? "Net wins swung across your leagues — a model, not a prediction"
+            : "Raw projected point swing, unweighted"
+        }
+      >
+        <div className="sc-rooting-list">
+          {rooting.map((r) => (
+            <RootingTile
+              key={r.eventId}
+              interest={r}
+              game={games.get(r.eventId)}
+              mode={mode}
+            />
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }

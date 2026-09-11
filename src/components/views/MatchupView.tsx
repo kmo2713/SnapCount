@@ -368,8 +368,28 @@ function MatchupDetailView({ detail }: { detail: MatchupDetail }) {
         </p>
       )}
 
-      {/* Slot-by-slot lineups */}
-      <div className="sc-table-scroll">
+      {/*
+        Slot-by-slot lineups.
+
+        The table below mirrors the two lineups around a central slot column,
+        which is the clearest thing on a laptop and needs 720px to exist at all
+        — nothing can shrink it to a phone, because the whole idea is two rows
+        facing each other. So a phone gets the same comparison stacked: one
+        block per slot, your player over theirs, which keeps the head-to-head
+        reading without the width.
+      */}
+      <div className="sc-slot-stack">
+        {detail.slots.map((row) => (
+          <SlotBlock
+            key={row.slotIndex}
+            row={row}
+            mineName={detail.mine.name}
+            oppName={detail.opponent?.name ?? "—"}
+          />
+        ))}
+      </div>
+
+      <div className="sc-table-scroll sc-slot-table">
         <table className="sc-table" style={{ minWidth: 720 }}>
           <thead>
             <tr>
@@ -520,6 +540,56 @@ function TeamHeader({
 }
 
 /** One lineup slot, both sides. */
+/**
+ * One slot as a stacked block, for a phone.
+ *
+ * Same comparison as a row of the mirrored table, turned ninety degrees: the
+ * slot labels the block, and the two players sit one above the other with the
+ * projected winner marked exactly as the table marks it.
+ */
+function SlotBlock({
+  row,
+  mineName,
+  oppName,
+}: {
+  row: MatchupSlotRow;
+  mineName: string;
+  oppName: string;
+}) {
+  const mineProj = row.mine?.projectedPoints ?? null;
+  const oppProj = row.opponent?.projectedPoints ?? null;
+  const mineWins = mineProj != null && oppProj != null && mineProj > oppProj;
+  const oppWins = mineProj != null && oppProj != null && oppProj > mineProj;
+
+  const side = (
+    label: string,
+    player: MatchupSlotRow["mine"],
+    proj: number | null,
+    winning: boolean,
+  ) => (
+    <div className="sc-slot-side" data-winning={winning ? "" : undefined}>
+      <div className="sc-slot-who">
+        <PlayerCell player={player} align="left" />
+        <span className="sc-slot-owner sc-truncate">{label}</span>
+      </div>
+      <div className="sc-slot-nums">
+        <span className="sc-mono sc-slot-pts">{fmt(player?.points ?? null)}</span>
+        <span className="sc-mono sc-slot-proj">{fmt(proj)} proj</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="sc-slot-block">
+      <div className="sc-slot-label">
+        <PosTag pos={row.slot} />
+      </div>
+      {side(mineName, row.mine, mineProj, mineWins)}
+      {side(oppName, row.opponent, oppProj, oppWins)}
+    </div>
+  );
+}
+
 function SlotRow({ row }: { row: MatchupSlotRow }) {
   const mineProj = row.mine?.projectedPoints ?? null;
   const oppProj = row.opponent?.projectedPoints ?? null;

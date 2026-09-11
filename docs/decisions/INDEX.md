@@ -39,6 +39,10 @@ Searchable by the YAML frontmatter in each file: `category`, `tags`, `applies_to
 
 ## Patterns
 
+- [2026-09-11 — A phone scrolls one way, and only measurement proves it](2026-09-11-pattern-a-phone-scrolls-one-way.md)
+  — six views scrolled sideways and screenshots had never shown it, because a table that
+  ends at the screen edge looks the same as one that continues for another 380px.
+  `npm run audit:overflow` measures 42 view/width combinations.
 - [2026-09-10 — A row count is a watermark; a filtered one is not](2026-09-10-pattern-a-row-count-is-a-watermark-a-filtered-one-is-not.md)
   — the ledger stored only the plays that mattered and compared that count against ESPN's
   total, leaving it permanently 83 rows "behind" a game it had read completely. Found by

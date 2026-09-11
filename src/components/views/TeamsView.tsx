@@ -307,12 +307,13 @@ function RosterTable({
       <table className="sc-table">
         <thead>
           <tr>
+            {/* NFL team, bye and trend fold under the player on a phone. */}
             <th>{showSlot ? "Slot" : "Pos"}</th>
             <th>Player</th>
-            <th>Team</th>
-            <th>Bye</th>
+            <th className="sc-col-optional">Team</th>
+            <th className="sc-col-optional">Bye</th>
             <th>Status</th>
-            <th>Trend</th>
+            <th className="sc-col-optional">Trend</th>
             {anyPoints && <th style={{ textAlign: "right" }}>Pts</th>}
           </tr>
         </thead>
@@ -335,15 +336,24 @@ function RosterTable({
                     {r.position}
                   </span>
                 )}
+                <span className="sc-cell-sub">
+                  {r.nflTeam || "—"}
+                  {r.byeWeek != null && ` · bye ${r.byeWeek}`}
+                </span>
               </td>
-              <td style={{ color: "var(--sc-text-muted)" }}>{r.nflTeam || "—"}</td>
-              <td className="sc-mono" style={{ color: "var(--sc-text-muted)" }}>
+              <td className="sc-col-optional" style={{ color: "var(--sc-text-muted)" }}>
+                {r.nflTeam || "—"}
+              </td>
+              <td
+                className="sc-mono sc-col-optional"
+                style={{ color: "var(--sc-text-muted)" }}
+              >
                 {r.byeWeek ?? "—"}
               </td>
               <td>
                 <StatusTag status={r.status} bodyPart={r.injuryBodyPart} withIcon />
               </td>
-              <td>
+              <td className="sc-col-optional">
                 <ConsistencyTag consistency={r.consistency} samples={r.seasonSamples} />
               </td>
               {anyPoints && (

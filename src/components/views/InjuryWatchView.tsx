@@ -74,13 +74,19 @@ export function InjuryWatchView({ data }: { data: DashboardData }) {
         <table className="sc-table">
           <thead>
             <tr>
+              {/*
+                Seven columns need 750px, and a phone has 362. Status is the
+                only one that survives beside the player — whether he is
+                starting for you, where, and what the knock is all fold under
+                the name, which is also where they read best.
+              */}
               <th>Pos</th>
               <th>Player</th>
-              <th>NFL team</th>
+              <th className="sc-col-optional">NFL team</th>
               <th>Status</th>
-              <th>Detail</th>
-              <th>Role</th>
-              <th>Fantasy team</th>
+              <th className="sc-col-optional">Detail</th>
+              <th className="sc-col-optional">Role</th>
+              <th className="sc-col-optional">Fantasy team</th>
             </tr>
           </thead>
           <tbody>
@@ -91,15 +97,44 @@ export function InjuryWatchView({ data }: { data: DashboardData }) {
                 </td>
                 <td>
                   <PlayerName name={r.name} nickname={r.nickname} />
+                  {/*
+                    The four dropped columns. Whether he is in your lineup leads,
+                    because that is the question this view exists to answer.
+                  */}
+                  <span className="sc-cell-sub">
+                    <span
+                      style={{
+                        color: r.starter ? "var(--sc-accent)" : undefined,
+                        fontWeight: r.starter ? 700 : 400,
+                      }}
+                    >
+                      {r.starter
+                        ? `STARTING · ${r.slotPosition}`
+                        : r.kind === "ir"
+                          ? "IR"
+                          : r.kind === "taxi"
+                            ? "Taxi"
+                            : "Bench"}
+                    </span>
+                    {" · "}
+                    {r.nflTeam || "—"}
+                    {r.injuryBodyPart ? ` · ${r.injuryBodyPart}` : ""}
+                    {` · ${r.teamName}`}
+                  </span>
                 </td>
-                <td style={{ color: "var(--sc-text-muted)" }}>{r.nflTeam || "—"}</td>
+                <td className="sc-col-optional" style={{ color: "var(--sc-text-muted)" }}>
+                  {r.nflTeam || "—"}
+                </td>
                 <td>
                   <StatusTag status={r.status} />
                 </td>
-                <td style={{ color: "var(--sc-text-muted)", fontSize: 12 }}>
+                <td
+                  className="sc-col-optional"
+                  style={{ color: "var(--sc-text-muted)", fontSize: 12 }}
+                >
                   {r.injuryBodyPart ?? "—"}
                 </td>
-                <td>
+                <td className="sc-col-optional">
                   {r.starter ? (
                     <span
                       style={{
@@ -116,7 +151,7 @@ export function InjuryWatchView({ data }: { data: DashboardData }) {
                     </span>
                   )}
                 </td>
-                <td>
+                <td className="sc-col-optional">
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <FormatBadge format={r.leagueFormat} compact />
                     <PlatformBadge platform={r.platform} compact />

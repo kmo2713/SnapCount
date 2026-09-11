@@ -105,11 +105,16 @@ export function DraftView({ data }: { data: DashboardData }) {
         <table className="sc-table">
           <thead>
             <tr>
+              {/*
+                Round is implied by the pick number and the NFL team belongs
+                with the player, so a phone keeps pick, player, position and who
+                took him.
+              */}
               <th>Pick</th>
-              <th>Round</th>
+              <th className="sc-col-optional">Round</th>
               <th>Player</th>
               <th>Pos</th>
-              <th>NFL team</th>
+              <th className="sc-col-optional">NFL team</th>
               <th>Drafted by</th>
             </tr>
           </thead>
@@ -117,7 +122,10 @@ export function DraftView({ data }: { data: DashboardData }) {
             {picks.map((p) => (
               <tr key={p.pickNo}>
                 <td className="sc-mono">{p.pickNo}</td>
-                <td className="sc-mono" style={{ color: "var(--sc-text-muted)" }}>
+                <td
+                  className="sc-mono sc-col-optional"
+                  style={{ color: "var(--sc-text-muted)" }}
+                >
                   {p.round}
                   {p.draftSlot != null && (
                     <span style={{ fontSize: 11 }}>.{p.draftSlot}</span>
@@ -125,6 +133,9 @@ export function DraftView({ data }: { data: DashboardData }) {
                 </td>
                 <td style={{ fontWeight: 600 }}>
                   {p.playerName}
+                  <span className="sc-cell-sub">
+                    {p.nflTeam || "—"} · round {p.round}
+                  </span>
                   {p.isKeeper && (
                     <span
                       style={{
@@ -141,7 +152,9 @@ export function DraftView({ data }: { data: DashboardData }) {
                 <td>
                   <PosTag pos={p.position} />
                 </td>
-                <td style={{ color: "var(--sc-text-muted)" }}>{p.nflTeam || "—"}</td>
+                <td className="sc-col-optional" style={{ color: "var(--sc-text-muted)" }}>
+                  {p.nflTeam || "—"}
+                </td>
                 <td>{p.pickedBy}</td>
               </tr>
             ))}

@@ -24,7 +24,8 @@
     "cost": "tsx scripts/estimate-cost.ts",
     "espn:check": "tsx scripts/espn-check.ts",
     "espn:verify": "tsx scripts/espn-verify.ts",
-    "prompt": "tsx scripts/show-prompt.ts"
+    "prompt": "tsx scripts/show-prompt.ts",
+    "audit:overflow": "node scripts/audit-overflow.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",

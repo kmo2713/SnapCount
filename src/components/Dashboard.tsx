@@ -5,7 +5,7 @@
  * nav, and a single scrolling content pane — the prototype's layout, now
  * driven by real data.
  */
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -13,6 +13,8 @@ import {
   ArrowLeftRight,
   BarChart3,
   CalendarOff,
+  ChevronDown,
+  ChevronRight,
   ClipboardList,
   HeartPulse,
   LayoutGrid,
@@ -29,6 +31,7 @@ import {
 import type { DashboardData } from "@/lib/domain/types";
 import { FormatBadge, PlatformBadge, fmt } from "@/components/ui/primitives";
 import { Avatar } from "@/components/ui/Avatar";
+import { Modal } from "@/components/ui/Modal";
 
 import { OverviewView } from "./views/OverviewView";
 import { PowerRankingsView } from "./views/PowerRankingsView";
@@ -83,20 +86,11 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
   const [data, setData] = useState(initialData);
   const [tab, setTab] = useState<TabId>("overview");
 
-  /*
-   * On a phone the nav is a horizontal strip, so the destination you just
-   * chose can sit off-screen. Pull it into view whenever it changes. On
-   * desktop the rail does not scroll horizontally and this is a no-op.
-   */
-  const navRef = useRef<HTMLElement | null>(null);
-  const activeNavRef = useRef<HTMLButtonElement | null>(null);
+  /* Phone-only drill-ins for the two things that used to scroll sideways. */
+  const [showLeagues, setShowLeagues] = useState(false);
+  const [showNav, setShowNav] = useState(false);
+  const activeNav = NAV.find((n) => n.id === tab) ?? NAV[0];
 
-  useEffect(() => {
-    const nav = navRef.current;
-    const active = activeNavRef.current;
-    if (!nav || !active || nav.scrollWidth <= nav.clientWidth) return;
-    active.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
-  }, [tab]);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   /** Which team’s head-to-head is open. Null shows the matchup list. */
   const [matchupTeamId, setMatchupTeamId] = useState<string | null>(null);
@@ -223,86 +217,105 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
           </div>
         </div>
 
-        {/* Cross-league scoreboard strip */}
-        <div
-          className="sc-scroll-x"
-          style={{ display: "flex", gap: 10, marginTop: 12, paddingBottom: 4 }}
-        >
+        {/*
+          Cross-league scoreboard.
+
+          A row of tiles on a laptop, where nine of them fit across. On a phone
+          nine tiles is 1,328px of sideways scrolling in permanently-visible
+          chrome, so it collapses to one button and the same tiles open
+          stacked in a dialog — where they get the full width and read better
+          than they ever did squeezed into 143px.
+        */}
+        <div className="sc-scoreboard-strip">
           {data.teams.length === 0 && (
             <div style={{ fontSize: 12, color: "var(--sc-text-muted)", padding: "6px 0" }}>
               No teams loaded.
             </div>
           )}
           {data.teams.map((t) => (
-            <button
+            <ScoreboardTile
               key={t.id}
-              className="sc-card sc-hover sc-scoreboard-tile"
-              // A scoreboard tile is about the game, so it opens the head-to-head
-              // when there is one and falls back to the roster when there is not.
-              onClick={() => (t.matchup ? openMatchup(t.id) : openTeam(t.id))}
-              title={t.matchup ? "View this matchup" : "View this roster"}
-              style={{
-                flex: "0 0 auto",
-                padding: "8px 12px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 4,
-                minWidth: 156,
-                textAlign: "left",
-                color: "inherit",
-                font: "inherit",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 8,
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-                  <Avatar src={t.avatar} name={t.teamName} size={22} />
-                  <span
-                    className="sc-truncate"
-                    style={{ fontSize: 12, fontWeight: 700, maxWidth: 92 }}
-                  >
-                    {t.teamName}
-                  </span>
-                </span>
-                <span className="sc-scoreboard-badges">
-                  <FormatBadge format={t.leagueFormat} />
-                  <PlatformBadge platform={t.platform} />
-                </span>
-              </div>
-              <div
-                className="sc-mono"
-                style={{ fontSize: 12, color: "var(--sc-text-muted)" }}
-              >
-                {t.record}
-                {t.matchup?.mine.score != null && (
-                  <span style={{ marginLeft: 8, color: "var(--sc-text)" }}>
-                    {fmt(t.matchup.mine.score)}
-                    {t.matchup.opponent && (
-                      <span style={{ color: "var(--sc-text-muted)" }}>
-                        {" "}
-                        vs {fmt(t.matchup.opponent.score)}
-                      </span>
-                    )}
-                  </span>
-                )}
-              </div>
-            </button>
+              team={t}
+              onOpen={() => (t.matchup ? openMatchup(t.id) : openTeam(t.id))}
+            />
           ))}
         </div>
+
+        {data.teams.length > 0 && (
+          <button
+            type="button"
+            className="sc-btn sc-scoreboard-open"
+            onClick={() => setShowLeagues(true)}
+          >
+            <LayoutGrid size={14} />
+            {data.teams.length} leagues
+            <span style={{ marginLeft: "auto", color: "var(--sc-text-muted)" }}>
+              {totalRecord.w}-{totalRecord.l}
+              {totalRecord.t > 0 ? `-${totalRecord.t}` : ""}
+            </span>
+            <ChevronRight size={14} />
+          </button>
+        )}
       </header>
 
-      <div className="sc-body">
-        <nav className="sc-sidebar" ref={navRef}>
+      <Modal
+        open={showLeagues}
+        onClose={() => setShowLeagues(false)}
+        title="Your leagues"
+        subtitle={`Week ${data.viewedWeek} · tap one for the matchup`}
+      >
+        <div className="sc-scoreboard-stack">
+          {data.teams.map((t) => (
+            <ScoreboardTile
+              key={t.id}
+              team={t}
+              stacked
+              onOpen={() => {
+                setShowLeagues(false);
+                if (t.matchup) openMatchup(t.id);
+                else openTeam(t.id);
+              }}
+            />
+          ))}
+        </div>
+      </Modal>
+
+      <Modal
+        open={showNav}
+        onClose={() => setShowNav(false)}
+        title="Go to"
+        subtitle="Every view in the dashboard"
+      >
+        <div className="sc-nav-menu">
           {NAV.map((n) => (
             <button
               key={n.id}
-              ref={tab === n.id ? activeNavRef : undefined}
+              type="button"
+              className={`sc-nav-btn ${tab === n.id ? "active" : ""}`}
+              aria-current={tab === n.id ? "page" : undefined}
+              onClick={() => {
+                setTab(n.id);
+                setShowNav(false);
+              }}
+            >
+              <n.icon size={16} />
+              <span>{n.label}</span>
+            </button>
+          ))}
+        </div>
+      </Modal>
+
+      <div className="sc-body">
+        {/*
+          Thirteen labelled destinations. As a rail on a laptop; on a phone
+          that same list was a 1,606px sideways scroll, and shrinking it to
+          icons was worse — thirteen unlabelled glyphs. So the phone gets the
+          view it is on, and the full labelled list one tap away.
+        */}
+        <nav className="sc-sidebar">
+          {NAV.map((n) => (
+            <button
+              key={n.id}
               className={`sc-nav-btn ${tab === n.id ? "active" : ""}`}
               onClick={() => setTab(n.id)}
               aria-current={tab === n.id ? "page" : undefined}
@@ -312,6 +325,12 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
             </button>
           ))}
         </nav>
+
+        <button type="button" className="sc-nav-open" onClick={() => setShowNav(true)}>
+          <activeNav.icon size={16} />
+          <span>{activeNav.label}</span>
+          <ChevronDown size={14} style={{ marginLeft: "auto" }} />
+        </button>
 
         <main className="sc-content">
           {warnings.length > 0 && <WarningBanner warnings={warnings} />}
@@ -357,6 +376,59 @@ export function Dashboard({ initialData }: { initialData: DashboardData }) {
         onClose={() => setMatchupTeamId(null)}
       />
     </div>
+  );
+}
+
+/**
+ * One league's line on the cross-league scoreboard.
+ *
+ * The same component in both places it appears — a fixed-width tile in the
+ * laptop strip, and a full-width row in the phone dialog. Rendering it twice
+ * would let the two drift, and this is the thing you check first on a Sunday.
+ */
+function ScoreboardTile({
+  team,
+  onOpen,
+  stacked = false,
+}: {
+  team: DashboardData["teams"][number];
+  onOpen: () => void;
+  /** Full width, for the stacked dialog list. */
+  stacked?: boolean;
+}) {
+  return (
+    <button
+      className={`sc-card sc-hover sc-scoreboard-tile${stacked ? " sc-scoreboard-tile-stacked" : ""}`}
+      // A scoreboard tile is about the game, so it opens the head-to-head
+      // when there is one and falls back to the roster when there is not.
+      onClick={onOpen}
+      title={team.matchup ? "View this matchup" : "View this roster"}
+    >
+      <div className="sc-scoreboard-tile-top">
+        <span style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+          <Avatar src={team.avatar} name={team.teamName} size={22} />
+          <span className="sc-truncate sc-scoreboard-name">{team.teamName}</span>
+        </span>
+        <span className="sc-scoreboard-badges">
+          <FormatBadge format={team.leagueFormat} />
+          <PlatformBadge platform={team.platform} />
+        </span>
+      </div>
+      <div className="sc-mono" style={{ fontSize: 12, color: "var(--sc-text-muted)" }}>
+        {team.record}
+        {team.matchup?.mine.score != null && (
+          <span style={{ marginLeft: 8, color: "var(--sc-text)" }}>
+            {fmt(team.matchup.mine.score)}
+            {team.matchup.opponent && (
+              <span style={{ color: "var(--sc-text-muted)" }}>
+                {" "}
+                vs {fmt(team.matchup.opponent.score)}
+              </span>
+            )}
+          </span>
+        )}
+      </div>
+    </button>
   );
 }
 

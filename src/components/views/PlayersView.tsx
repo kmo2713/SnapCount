@@ -161,11 +161,16 @@ export function PlayersView({ data }: { data: DashboardData }) {
           <table className="sc-table">
             <thead>
               <tr>
+                {/*
+                  A phone keeps position, player, status and average — what you
+                  scan this table for. NFL team, bye and slot fold under the
+                  player's name instead of each taking a column.
+                */}
                 <th>Pos</th>
                 <th>Player</th>
                 <th className="sc-col-optional">NFL team</th>
-                <th>Bye</th>
-                <th>Slot</th>
+                <th className="sc-col-optional">Bye</th>
+                <th className="sc-col-optional">Slot</th>
                 <th>Status</th>
                 <th className="sc-col-optional">Trend</th>
                 <th style={{ textAlign: "right" }}>Avg</th>
@@ -180,14 +185,30 @@ export function PlayersView({ data }: { data: DashboardData }) {
                   </td>
                   <td>
                     <PlayerName name={r.name} nickname={r.nickname} />
+                    {/* The three columns a phone drops, on one line. */}
+                    <span className="sc-cell-sub">
+                      {r.nflTeam || "—"}
+                      {r.byeWeek != null && ` · bye ${r.byeWeek}`}
+                      {" · "}
+                      {r.starter
+                        ? r.slotPosition
+                        : r.kind === "ir"
+                          ? "IR"
+                          : r.kind === "taxi"
+                            ? "Taxi"
+                            : "Bench"}
+                    </span>
                   </td>
                   <td className="sc-col-optional" style={{ color: "var(--sc-text-muted)" }}>
                     {r.nflTeam || "—"}
                   </td>
-                  <td className="sc-mono" style={{ color: "var(--sc-text-muted)" }}>
+                  <td
+                    className="sc-mono sc-col-optional"
+                    style={{ color: "var(--sc-text-muted)" }}
+                  >
                     {r.byeWeek ?? "—"}
                   </td>
-                  <td>
+                  <td className="sc-col-optional">
                     {r.starter ? (
                       <span
                         style={{
