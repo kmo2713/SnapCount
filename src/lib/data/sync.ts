@@ -30,6 +30,7 @@ import { sleeper } from "@/lib/platforms/sleeper/client";
 import {
   fetchLeagueBundle,
   getPlayerMap,
+  resolveSyncWeek,
   resolveViewedWeek,
 } from "@/lib/platforms/sleeper/fetch";
 import { combinePoints, teamNameFor } from "@/lib/platforms/sleeper/normalize";
@@ -473,7 +474,7 @@ export async function syncLiveScores(
 
     const resolvedSeason =
       season ?? env.season ?? state.league_season ?? state.season;
-    const resolvedWeek = week ?? resolveViewedWeek(state);
+    const resolvedWeek = week ?? resolveSyncWeek(state);
 
     const leagueRows = await db
       .select({
@@ -820,7 +821,7 @@ export async function syncEspnLiveScores(
     const state = await sleeper.getState();
     const resolvedSeason =
       season ?? env.season ?? state?.league_season ?? state?.season ?? "";
-    const resolvedWeek = week ?? (state ? resolveViewedWeek(state) : 1);
+    const resolvedWeek = week ?? (state ? resolveSyncWeek(state) : 1);
 
     const leagueRows = await db
       .select({
@@ -1145,7 +1146,7 @@ export async function syncSleeperLeagues(
     if (!state) throw new Error("Sleeper returned no NFL state");
 
     const season = options.season ?? env.season ?? state.league_season ?? state.season;
-    const currentWeek = resolveViewedWeek(state);
+    const currentWeek = resolveSyncWeek(state);
     const weeks =
       options.weeks ?? Array.from({ length: currentWeek }, (_, i) => i + 1);
 

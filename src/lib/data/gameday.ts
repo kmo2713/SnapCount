@@ -21,7 +21,7 @@
  */
 import { and, eq, inArray } from "drizzle-orm";
 
-import { requireDb, schema } from "@/lib/db/client";
+import { getDb, requireDb, schema } from "@/lib/db/client";
 import type {
   GamedayData,
   LineupAlert,
@@ -127,15 +127,61 @@ const globalForGameday = globalThis as unknown as {
  */
 async function cachedState(): Promise<SleeperState | null> {
   const cached = globalForGameday.snapCountNflState;
-  if (cached && Date.now() - cached.fetchedAt < STATE_TTL_MS) return cached.state;
+  if (cached?.state && Date.now() - cached.fetchedAt < STATE_TTL_MS) {
+    return cached.state;
+  }
 
   try {
     const state = await sleeper.getState();
-    globalForGameday.snapCountNflState = { state, fetchedAt: Date.now() };
-    return state;
+    /*
+     * Only a real answer is memoised. Caching a null meant one transient miss
+     * — the first render after a cold start, which is exactly when it is most
+     * likely — pinned the whole page to the `: 1` fallback for five minutes,
+     * with no warning and no error in the log. It showed week 1 on the Tuesday
+     * after week 2 while the database held week 3.
+     */
+    if (state) {
+      globalForGameday.snapCountNflState = { state, fetchedAt: Date.now() };
+      return state;
+    }
+    return cached?.state ?? (await storedState());
   } catch {
     // Last known good beats failing the page over a week number.
-    return cached?.state ?? null;
+    return cached?.state ?? (await storedState());
+  }
+}
+
+/**
+ * The NFL state as the last sync recorded it.
+ *
+ * The fallback that should always have been here. When Sleeper cannot be
+ * reached, the answer is not "week 1" — it is in this app's own database,
+ * written by the sync and usually minutes old. Guessing week 1 in September
+ * empties every panel on the page and looks exactly like having no data.
+ */
+async function storedState(): Promise<SleeperState | null> {
+  try {
+    const db = getDb();
+    if (!db) return null;
+    const [row] = await db
+      .select()
+      .from(schema.nflState)
+      .where(eq(schema.nflState.id, "nfl"))
+      .limit(1);
+    if (!row) return null;
+
+    return {
+      season: row.season,
+      season_type: row.seasonType,
+      week: row.week,
+      display_week: row.displayWeek,
+      league_season: row.leagueSeason ?? row.season,
+      previous_season: row.previousSeason ?? "",
+      season_start_date: row.seasonStartDate ?? "",
+      leg: 0,
+    };
+  } catch {
+    return null;
   }
 }
 

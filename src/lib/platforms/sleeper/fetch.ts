@@ -27,15 +27,46 @@ export interface LeagueBundle {
 /**
  * Which week the dashboard should show.
  *
+ * `display_week`, not `week`, and the difference is a whole day and a half of
+ * the season. Sleeper rolls `week` forward on Tuesday morning as soon as Monday
+ * night is final, but keeps `display_week` on the week that just finished until
+ * the next one is close — and `display_week` is what Sleeper's own app shows.
+ * Reading `week` meant that from Tuesday to Thursday every week of the season
+ * the dashboard showed a week nobody had played yet: nine leagues of zeroes,
+ * the moment you most want to look at what just happened.
+ *
+ * Measured on the Tuesday after week 2: `{"week":3,"display_week":2}`.
+ *
  * Sleeper reports a week during preseason too (`season_type: "pre"`), but those
  * weeks have no fantasy scoring, so we pin to week 1 until the regular season
  * actually starts rather than showing an empty week 3.
  */
 export function resolveViewedWeek(state: SleeperState): number {
   if (state.season_type === "regular" || state.season_type === "post") {
-    return Math.min(Math.max(state.week, 1), 18);
+    const shown = state.display_week ?? state.week;
+    return clampWeek(shown >= 1 ? shown : state.week);
   }
   return 1;
+}
+
+/**
+ * The furthest week worth *fetching*, which is not the same question.
+ *
+ * Showing a week nobody has played is a bad view; failing to fetch one is
+ * missing data, and the two mistakes are not symmetrical. So the sync takes
+ * whichever of the two numbers is further ahead: during the Tuesday gap that
+ * pulls an empty week 3 at no cost, and on Thursday it cannot be caught behind
+ * waiting for `display_week` to catch up while games are already live.
+ */
+export function resolveSyncWeek(state: SleeperState): number {
+  if (state.season_type === "regular" || state.season_type === "post") {
+    return clampWeek(Math.max(state.week, state.display_week ?? 0));
+  }
+  return 1;
+}
+
+function clampWeek(week: number): number {
+  return Math.min(Math.max(week, 1), 18);
 }
 
 /** True once real games are being played. */

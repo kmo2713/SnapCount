@@ -28,6 +28,9 @@ Searchable by the YAML frontmatter in each file: `category`, `tags`, `applies_to
 - [2026-09-04 — `globalThis` outlives the code that shaped it, and `??=` preserves the old shape](2026-09-04-bug-fix-globalthis-outlives-the-code-that-shaped-it.md)
   — changing a cached shape broke every request. Not a hot-reload artifact: a warm
   serverless instance across a deploy fails identically.
+- [2026-09-22 — Three ways to show the wrong week](2026-09-22-bug-fix-three-ways-to-show-the-wrong-week.md)
+  — a stale sync, `week` vs `display_week`, and a memo that cached a failed lookup. All
+  three look identical from the outside: a page of zeroes.
 - [2026-09-10 — Whose player it is does not tell you whether the play helped](2026-09-10-bug-fix-whose-player-it-is-does-not-tell-you-if-it-helped.md)
   — a plus meaning "my player" was rendered where readers see "this helped me", so every
   interception was reported backwards in both directions. Also: half the ESPN leagues hide
